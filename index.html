@@ -745,40 +745,30 @@ function renderLeaderboardBlock(stats) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   7. SHARE / COPY — Wordle-style emoji blocks scaled by hints used
-      (there's no "optimal route" axis here, so hints is the closest
-      analogue to tubed's diff-from-optimal), plus the leaderboard
-      percentile when one's available.
+   7. SHARE / COPY — a compact 4-line snippet: puzzle/mode/time, hints
+      used, then whichever of "Top X% today" or a top-3 "Nth in the
+      World!" callout applies (never both; neither if the leaderboard
+      doesn't have enough players yet), then the site link.
    ══════════════════════════════════════════════════════════════════ */
 const SITE_URL = "playthreaded.co.uk"; // TODO: swap for the real domain once this is hosted
 
-function buildShareBlocks(hints) {
-  if (hints === 0) return "🟩🟩🟩🟩🟩";
-  if (hints === 1) return "🟩🟩🟩🟩🟨";
-  if (hints === 2) return "🟩🟩🟨🟨⬜";
-  return "🟨🟨⬜⬜⬜";
-}
 function buildShareText(secs, hints) {
   const hintsLine = hints === 0 ? "🧭 No hints: nailed it solo"
     : hints === 1 ? "🧭 1 hint: a small nudge"
     : hints === 2 ? "🧭 2 hints: needed a steer"
     : "🧭 3 hints: talked me through it";
-  // Naming the line is safe post-solve in Easy (start/finish are shown to
-  // everyone up front anyway). Hard never names its lines here — a share is
-  // public and other players may not have solved TODAY'S puzzle yet, so
-  // this can't spoil the interchange for them even after the sharer's won.
-  const lineNote = mode === "hard" ? "" : "\n📍 " + puzzle.lineName + " line";
-  const challengeLine = mode === "hard"
-    ? "🔀 Two lines cross this grid. Find where."
-    : "🗺️ Trace the " + puzzle.lineName + " line faster than me.";
   const lines = [
-    "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs) + lineNote,
-    buildShareBlocks(hints),
+    "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs),
     hintsLine,
   ];
   const lb = _leaderboardStatsCache[mode + ":" + isoToday()];
-  if (_lbShowPct(lb)) lines.push("📊 Top " + lb.top_pct + "% today");
-  lines.push(challengeLine, "➡️ " + SITE_URL);
+  if (lb && lb.is_top3 && lb.total_players >= LB_MIN_PLAYERS) {
+    const ordinal = lb.my_rank === 1 ? "1st" : lb.my_rank === 2 ? "2nd" : "3rd";
+    lines.push("🏆 " + ordinal + " in the World!");
+  } else if (_lbShowPct(lb)) {
+    lines.push("📊 Top " + lb.top_pct + "% today");
+  }
+  lines.push("➡️ " + SITE_URL);
   return lines.join("\n");
 }
 function updateShareButtons() {
