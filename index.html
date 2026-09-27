@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Threaded</title>
+<link rel="icon" href="threaded-icon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+/* The browser's default [hidden]{display:none} is a UA-origin rule, so any
+   author rule that sets display: on the same element (.mode-toggle,
+   .btn-row, .btn-share, etc. all set display:flex) silently wins and the
+   element stays visible despite `el.hidden = true`. This one rule makes
+   the hidden attribute always win, regardless of what else is set. */
+[hidden]{display:none !important;}
+:root{--bg:#f0f4f8;--surf:#ffffff;--brd:#dde3ec;--red:#dc2626;--navy:#1e40af;--txt:#0f172a;--muted:#64748b;--coral:#e85d4f;--ok:#16a34a;--line:#E32017;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+.wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px;}
+
+/* ---- header ---- */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.roundel{width:56px;height:56px;border-radius:50%;flex-shrink:0;object-fit:cover;display:block;}
+.gtitle{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:1;}
+.gsub{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.hdr-pills{margin-left:auto;display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.timer-box{background:var(--surf);border:0.5px solid var(--brd);border-radius:10px;padding:6px 0;text-align:center;flex-shrink:0;width:80px;}
+.timer-n{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red);line-height:1;letter-spacing:1px;font-variant-numeric:tabular-nums;}
+.timer-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.timer-box.done .timer-n{color:var(--muted);}
+
+.daily-badge{font-size:11.5px;color:var(--ok);text-align:center;font-weight:600;margin-bottom:10px;}
+
+/* ---- cards ---- */
+.card{background:var(--surf);border:0.5px solid var(--brd);border-radius:14px;padding:14px;margin-bottom:12px;}
+.sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;}
+
+/* ---- route card ---- */
+.challenge-row{display:flex;align-items:center;}
+.st-box{flex:1;text-align:center;min-width:0;}
+.st-role{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:2px;}
+.st-name{font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:.5px;line-height:1.1;color:var(--txt);word-break:break-word;}
+.arr{font-size:20px;color:var(--red);padding:0 10px;flex-shrink:0;}
+.challenge-sub{text-align:center;font-size:12px;color:var(--txt);font-weight:500;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--brd);letter-spacing:.3px;}
+
+/* ---- grid ---- */
+.board-card{padding:10px;}
+.board{position:relative;width:100%;aspect-ratio:1;touch-action:none;user-select:none;}
+.cells{position:absolute;inset:0;display:grid;
+       grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:6px;}
+.c{background:var(--bg);border:0.5px solid var(--brd);border-radius:8px;
+   display:flex;align-items:center;justify-content:center;padding:3px;
+   position:relative;overflow:hidden;transition:background .12s;}
+.c.station{background:var(--surf);z-index:3;}
+.c.start{background:#00e87a;}
+.c.start .nm{color:#053b22;}
+.c.finish{background:#FFD300;}
+.c.finish .nm{color:#4d3d00;}
+.c .nm{font-family:'Bebas Neue',sans-serif;font-size:clamp(8.5px,2.3vw,11.5px);line-height:1.08;
+       text-align:center;letter-spacing:.2px;word-break:break-word;hyphens:auto;color:var(--txt);z-index:2;}
+
+.c.head::after{content:"";position:absolute;inset:0;
+               box-shadow:inset 0 0 0 3px var(--head-color, var(--line));border-radius:8px;z-index:4;}
+.c.head.start::after{content:none;}
+.c.bad{animation:shake .22s;}
+@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.c.hinted{animation:hintpulse 1.5s ease-in-out;z-index:4;}
+@keyframes hintpulse{0%,100%{box-shadow:none;}40%{box-shadow:0 0 0 4px var(--navy) inset;}}
+
+svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+
+/* ---- status ---- */
+.status{text-align:center;font-size:13px;min-height:20px;font-weight:500;color:var(--muted);margin-bottom:12px;}
+
+/* ---- mode toggles ---- */
+.mode-toggle{display:flex;background:var(--surf);border:0.5px solid var(--brd);border-radius:10px;padding:3px;margin-bottom:10px;gap:3px;}
+.mode-tab{flex:1;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.5px;color:var(--muted);background:none;border:none;border-radius:7px;cursor:pointer;transition:background-color 0.15s, color 0.15s;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:6px;touch-action:manipulation;}
+.mode-tab:hover{color:var(--txt);}
+.mode-tab.on{background:var(--navy);color:#fff;}
+.mode-tab.hard.on{background:var(--coral);color:#fff;}
+.mode-tab .mode-check{font-size:11px;opacity:0.9;}
+
+/* ---- practice shuffle / daily note ---- */
+.aux-row{margin-bottom:12px;}
+.daily-note{font-size:11.5px;color:var(--muted);text-align:center;padding:8px 0;}
+
+/* ---- action buttons ---- */
+.btn-row{display:flex;gap:8px;margin-bottom:12px;}
+.btn-row button{flex:1;touch-action:manipulation;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;transition:all 0.15s;}
+.btn-ghost{background:none;border:0.5px solid var(--brd);color:var(--muted);padding:11px 8px;font-size:13px;font-weight:500;}
+.btn-ghost:hover{border-color:var(--txt);color:var(--txt);}
+.btn-ghost:disabled{opacity:.4;cursor:not-allowed;}
+.btn-ghost:disabled:hover{border-color:var(--brd);color:var(--muted);}
+.btn-add{background:var(--navy);color:#fff;border:none;padding:11px 8px;font-size:13px;font-weight:500;letter-spacing:.3px;}
+.btn-add:hover{background:#1e3a8a;}
+.btn-add.hard{background:var(--coral);}
+.btn-add.hard:hover{background:#d64a3b;}
+.btn-view-results{background:var(--navy);color:#fff;border:none;width:100%;padding:12px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;touch-action:manipulation;}
+.btn-view-results.hard{background:var(--coral);}
+
+.hint{font-size:12px;color:var(--muted);text-align:center;margin-top:2px;}
+
+/* ---- leaderboard ---- */
+.lb-band{border-radius:12px;padding:12px 14px;margin:0 0 12px;text-align:center;color:#fff;animation:lbIn .45s cubic-bezier(.22,1.2,.36,1) both;}
+.lb-band.lb-solo{margin-bottom:16px;}
+.lb-anchor{font-size:12px;color:var(--muted);text-align:center;margin:0 0 16px;animation:lbIn .45s cubic-bezier(.22,1.2,.36,1) both;}
+.lb-band.tier-elite{background:linear-gradient(135deg,#b45309,#d97706);}
+.lb-band.tier-good{background:linear-gradient(135deg,#1e40af,#1d4ed8);}
+.lb-band.tier-mid{background:var(--bg);color:var(--txt);border:0.5px solid var(--brd);}
+.lb-pct{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;line-height:1;}
+.lb-rank{font-size:12px;letter-spacing:0.4px;margin-top:5px;opacity:0.92;}
+@keyframes lbIn{from{opacity:0;transform:scale(.88) translateY(-6px);}to{opacity:1;transform:none;}}
+
+/* ---- modals ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity 0.2s;pointer-events:none;}
+.modal-overlay.open{opacity:1;pointer-events:auto;}
+.modal{background:var(--surf);border:0.5px solid var(--brd);border-radius:16px;padding:24px 22px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(20px);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px;line-height:1;border-radius:6px;}
+.how-step{display:flex;gap:14px;margin-bottom:18px;align-items:flex-start;}
+.how-num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:white;font-weight:500;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.how-txt{font-size:14px;line-height:1.6;}
+.how-txt strong{color:#1d4ed8;}
+.how-divider{border:none;border-top:0.5px solid var(--brd);margin:18px 0;}
+.btn-how{background:none;border:0.5px solid var(--brd);color:var(--muted);border-radius:8px;padding:5px 12px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;width:100%;justify-content:center;margin-bottom:12px;touch-action:manipulation;}
+.btn-how:hover{border-color:var(--txt);color:var(--txt);}
+.btn-got-it{background:var(--navy);color:white;width:100%;padding:13px;font-size:15px;font-family:'DM Sans',sans-serif;font-weight:500;border:none;border-radius:9px;cursor:pointer;margin-top:6px;}
+
+/* ---- feedback ---- */
+.btn-feedback{touch-action:manipulation;background:none;border:0.5px solid var(--brd);color:var(--muted);width:100%;padding:12px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.15s;margin-bottom:10px;}
+.btn-feedback:hover{border-color:var(--txt);color:var(--txt);}
+.feedback-input{background:var(--surf);border:1px solid var(--brd);border-radius:8px;color:var(--txt);padding:11px 12px;font-size:15px;font-family:'DM Sans',sans-serif;width:100%;margin-bottom:10px;}
+.feedback-input:focus{outline:none;border-color:#1d4ed8;}
+.feedback-input::placeholder{color:var(--muted);}
+textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
+.btn-feedback-send{background:var(--navy);color:white;width:100%;padding:13px;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;border:none;border-radius:9px;cursor:pointer;transition:background 0.15s;}
+.btn-feedback-send:hover:not(:disabled){background:#1e3a8a;}
+.btn-feedback-send:disabled{opacity:0.5;cursor:not-allowed;}
+.feedback-success{text-align:center;padding:20px 0 8px;color:#16a34a;font-size:14px;line-height:1.6;}
+
+/* ---- results card ---- */
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;text-align:center;margin-bottom:4px;}
+.result-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;}
+.times-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.time-box{background:var(--bg);border-radius:10px;padding:14px;text-align:center;}
+.time-val{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;}
+.time-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;}
+.puzzle-num{font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;letter-spacing:0.5px;}
+.btn-share{touch-action:manipulation;background:#16a34a;color:white;border:none;width:100%;padding:14px;font-size:15px;font-family:'DM Sans',sans-serif;font-weight:500;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s;margin-bottom:6px;}
+.btn-share:hover{background:#15803d;}
+.btn-share.success{background:#15803d;}
+.btn-copy-fallback{touch-action:manipulation;background:none;border:0.5px solid var(--brd);color:var(--muted);width:100%;padding:10px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;margin-bottom:10px;}
+.btn-copy-fallback:hover{border-color:var(--txt);color:var(--txt);}
+.btn-copy-fallback.copied{color:#16a34a;border-color:#16a34a;}
+.btn-reset{touch-action:manipulation;background:var(--navy);color:white;width:100%;padding:14px;font-size:15px;font-family:'DM Sans',sans-serif;font-weight:500;border:none;border-radius:9px;cursor:pointer;transition:background 0.15s;}
+.btn-reset:hover{background:#1e3a8a;}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--brd);font-size:13px;}
+.hist-row:last-child{border-bottom:none;}
+.hist-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.practice-note{font-size:12px;color:var(--muted);text-align:center;background:var(--bg);border-radius:10px;padding:10px;margin-bottom:16px;}
+
+/* ---- footer ---- */
+.footer{font-size:11px;color:var(--muted);text-align:center;margin-top:4px;line-height:1.6;}
+.footer-link{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:11px;cursor:pointer;padding:0;font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <img class="roundel" src="threaded-icon.png" alt="Threaded"/>
+    <div>
+      <div class="gtitle">Threaded</div>
+      <div class="gsub" id="gsub">Daily Puzzle · Easy</div>
+    </div>
+    <div class="hdr-pills">
+      <div class="timer-box" id="timer-box">
+        <div class="timer-n" id="timer">0:00</div>
+        <div class="timer-l">Timer</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="daily-badge" id="dailyBadge" hidden>&nbsp;</div>
+
+  <div id="boardView">
+    <div class="mode-toggle" id="modeToggle">
+      <button class="mode-tab on" data-mode="easy">🟢 Easy<span class="mode-check" id="check-easy" hidden>&#10003;</span></button>
+      <button class="mode-tab hard" data-mode="hard">🔥 Hard<span class="mode-check" id="check-hard" hidden>&#10003;</span></button>
+    </div>
+
+    <div class="mode-toggle" id="playToggle">
+      <button class="mode-tab on" data-play="daily">Daily</button>
+      <button class="mode-tab" data-play="practice">Practice</button>
+    </div>
+
+    <div class="aux-row" id="auxRow">
+      <div class="btn-row" id="shuffleRow" hidden>
+        <button class="btn-add" id="shuffle">Shuffle new practice puzzle</button>
+      </div>
+    </div>
+
+    <button class="btn-how" id="howBtn">❓ How to play</button>
+
+    <div class="card">
+      <div class="challenge-row">
+        <div class="st-box">
+          <div class="st-role">Start</div>
+          <div class="st-name" id="fromName">—</div>
+        </div>
+        <div class="arr">→</div>
+        <div class="st-box">
+          <div class="st-role">Finish</div>
+          <div class="st-name" id="toName">—</div>
+        </div>
+      </div>
+      <div class="challenge-sub" id="dir">&nbsp;</div>
+    </div>
+
+    <div class="card board-card">
+      <div class="board" id="board">
+        <svg class="path" id="svg" viewBox="0 0 532 532" preserveAspectRatio="none">
+          <polyline id="polyA" fill="none" stroke="var(--line)" stroke-width="40"
+                    stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
+          <polyline id="polyB" fill="none" stroke="none" stroke-width="40"
+                    stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
+        </svg>
+        <div class="cells" id="cells"></div>
+      </div>
+    </div>
+
+    <div class="status" id="status">&nbsp;</div>
+
+    <div class="btn-row" id="playRow">
+      <button class="btn-ghost" id="hint">Hint (3)</button>
+      <button class="btn-ghost" id="undo">Undo</button>
+      <button class="btn-ghost" id="reset">Reset</button>
+    </div>
+    <div id="viewResultsRow" hidden>
+      <button class="btn-view-results" id="viewResultsBtn" style="margin-bottom:12px;">View results →</button>
+      <button class="btn-view-results" id="tryOtherBoardBtn" hidden>Try today's Hard puzzle</button>
+    </div>
+
+    <div class="hint" id="footerHint">Drag from <strong>START</strong> through every square, hitting the stations in line order.</div>
+  </div>
+
+  <div class="card" id="resultsView" hidden>
+    <div class="result-title" id="resTitle">Solved!</div>
+    <div class="result-sub" id="resSub">— → —</div>
+    <div id="leaderboard-stats"></div>
+    <div class="times-grid">
+      <div class="time-box"><div class="time-val" id="resTime">0:00</div><div class="time-lbl">Time taken</div></div>
+      <div class="time-box"><div class="time-val" id="resHints">0</div><div class="time-lbl">Hints used</div></div>
+    </div>
+    <div class="practice-note" id="practiceNote" hidden>Practice puzzles aren't saved or ranked — switch to Daily to build your history.</div>
+    <div class="puzzle-num" id="resPuzzleNum">Threaded #1 · Easy</div>
+    <button class="btn-share" id="shareBtn">&#128172; Share my result</button>
+    <button class="btn-copy-fallback" id="copyBtn" hidden>&#128203; Copy to clipboard</button>
+    <button class="btn-view-results" id="tryOtherBtn" hidden style="margin-bottom:12px;">Try today's Hard puzzle</button>
+    <div class="sec-lbl" id="histLbl" style="margin-top:6px;">Past results</div>
+    <div id="histList"></div>
+    <button class="btn-feedback" id="feedbackBtn">&#x270F;&#xFE0F; Give feedback</button>
+    <button class="btn-reset" id="backBtn">&#8592; Back to puzzle</button>
+  </div>
+
+  <div class="footer">
+    Not affiliated with Transport for London<br>
+    <button class="footer-link" id="privacyBtn">Privacy</button> · © Threaded <span id="yr"></span>
+  </div>
+</div>
+
+<div class="modal-overlay" id="howOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">How to play</div>
+      <button class="modal-close" id="howClose">&#x2715;</button>
+    </div>
+    <div class="how-step"><div class="how-num">1</div><div class="how-txt">You're shown a <strong>start</strong> and <strong>finish</strong> station on a 5×5 grid.</div></div>
+    <div class="how-step"><div class="how-num">2</div><div class="how-txt">Drag from the start square through <strong>every square</strong> on the grid, without lifting your finger, until it's completely full.</div></div>
+    <div class="how-step"><div class="how-num">3</div><div class="how-txt">Station squares only accept your path when they're <strong>next in line order</strong> — get it wrong and the square bounces back.</div></div>
+    <div class="how-step"><div class="how-num">4</div><div class="how-txt">Fill every square, ending on <strong>finish</strong>, and you've solved it.</div></div>
+    <hr class="how-divider"/>
+    <div style="font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">Hard mode</div>
+    <div style="font-size:13px;color:var(--txt);line-height:1.6;margin-bottom:10px;">
+      Two Underground lines cross this grid. Nothing tells you where — spotting the interchange station, and which stations belong to which line, is the whole puzzle.
+    </div>
+    <hr class="how-divider"/>
+    <div style="font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">Hints</div>
+    <div style="font-size:13px;color:var(--txt);line-height:1.6;margin-bottom:16px;">
+      3 free hints per puzzle. Each reveals the next square you need — but only if your current path can still be completed; if you've drawn into a dead end, it'll tell you to undo instead.
+    </div>
+    <hr class="how-divider"/>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px;">
+      Two puzzles a day, Easy and Hard, refreshing at midnight — the same puzzles for everyone. Compare your time on the leaderboard.
+    </div>
+    <button class="btn-got-it" id="howGotIt">Got it — let's play! 🚇</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="feedbackOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Feedback</div>
+      <button class="modal-close" id="feedbackClose">&#x2715;</button>
+    </div>
+    <div id="feedbackFormWrap">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Found a bug, got a suggestion, or just want to say hi? We'd love to hear from you.</p>
+      <textarea id="feedbackMsg" class="feedback-input" placeholder="Your feedback..."></textarea>
+      <input type="email" id="feedbackEmail" class="feedback-input" placeholder="Your email (optional — only if you'd like a reply)"/>
+      <button class="btn-feedback-send" id="feedbackSendBtn">Send feedback</button>
+    </div>
+    <div id="feedbackSuccess" class="feedback-success" hidden>&#10003; Thanks for your feedback!<br><span style="color:var(--muted);font-size:12px;">It's been sent to the Threaded team.</span></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="privacyOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Privacy</div>
+      <button class="modal-close" id="privacyClose">&#x2715;</button>
+    </div>
+    <div style="font-size:13px;color:var(--txt);line-height:1.7;">
+      <p style="margin-bottom:12px;">Threaded stores your puzzle progress and history <strong>on your own device</strong> (localStorage) — it never leaves your browser and we can't see it.</p>
+      <p style="margin-bottom:12px;">To power the daily leaderboard, your device is given a <strong>random, anonymous ID</strong> — not linked to your name, email or any account. When you finish a daily puzzle, that ID, your completion time, hints used, and the puzzle's date and mode are sent to our database so we can compute rankings. No one can trace it back to you.</p>
+      <p style="margin-bottom:12px;">If you send feedback, your message (and email, if you choose to give one) is sent to us via a third-party form service, only so we can read and reply to it.</p>
+      <p style="margin-bottom:0;">We don't use tracking cookies, ads, or sell any data. Not affiliated with Transport for London.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// Whole-network data: every usable TfL/Overground line (one canonical
+// branch each — the longest with no duplicate station names, so loop
+// lines like the Circle, which repeat their join station at both ends
+// of the array, are excluded rather than mishandled), every real
+// cross-line interchange station, network-wide interchange counts
+// (`fame`), and real TfL line colours. A puzzle is not tied to any one
+// line — Easy picks a random line each generation, Hard picks a random
+// real interchange between any two.
+const DATA = {"lines":{"Bakerloo":["Elephant & Castle","Lambeth North","Waterloo","Embankment","Charing Cross","Piccadilly Circus","Oxford Circus","Regent's Park","Baker Street","Marylebone","Edgware Road","Paddington","Warwick Avenue","Maida Vale","Kilburn Park","Queen's Park","Kensal Green","Willesden Junction","Harlesden","Stonebridge Park","Wembley Central","North Wembley","South Kenton","Kenton","Harrow & Wealdstone"],"Central":["West Ruislip","Ruislip Gardens","South Ruislip","Northolt","Greenford","Perivale","Hanger Lane","North Acton","East Acton","White City","Shepherd's Bush","Holland Park","Notting Hill Gate","Queensway","Lancaster Gate","Marble Arch","Bond Street","Oxford Circus","Tottenham Court Road","Holborn","Chancery Lane","St. Paul's","Bank","Liverpool Street","Bethnal Green","Mile End","Stratford","Leyton","Leytonstone","Snaresbrook","South Woodford","Woodford","Buckhurst Hill","Loughton","Debden","Theydon Bois","Epping"],"District":["Ealing Broadway","Ealing Common","Acton Town","Chiswick Park","Turnham Green","Stamford Brook","Ravenscourt Park","Hammersmith","Barons Court","West Kensington","Earl's Court","Gloucester Road","South Kensington","Sloane Square","Victoria","St. James's Park","Westminster","Embankment","Temple","Blackfriars","Mansion House","Cannon Street","Monument","Tower Hill","Aldgate East","Whitechapel","Stepney Green","Mile End","Bow Road","Bromley-by-Bow","West Ham","Plaistow","Upton Park","East Ham","Barking","Upney","Becontree","Dagenham Heathway","Dagenham East","Elm Park","Hornchurch","Upminster Bridge","Upminster"],"DLR":["Bank","Shadwell","Limehouse","Westferry","West India Quay","Canary Wharf","Heron Quays","South Quay","Crossharbour","Mudchute","Island Gardens","Cutty Sark for Maritime Greenwich","Greenwich","Deptford Bridge","Elverson Road","Lewisham"],"Elizabeth":["Heathrow Terminal 4","Heathrow Terminals 2&3","Hayes & Harlington","Southall","Hanwell","West Ealing","Ealing Broadway","Acton Main Line","Paddington","Bond Street","Tottenham Court Road","Farringdon","Liverpool Street","Whitechapel","Stratford","Maryland","Forest Gate","Manor Park","Ilford","Seven Kings","Goodmayes","Chadwell Heath","Romford","Gidea Park","Harold Wood","Brentwood","Shenfield"],"Hammersmith & City":["Hammersmith","Goldhawk Road","Shepherd's Bush Market","Wood Lane","Latimer Road","Ladbroke Grove","Westbourne Park","Royal Oak","Paddington","Edgware Road","Baker Street","Great Portland Street","Euston Square","Kings Cross St. Pancras","Farringdon","Barbican","Moorgate","Liverpool Street","Aldgate East","Whitechapel","Stepney Green","Mile End","Bow Road","Bromley-by-Bow","West Ham","Plaistow","Upton Park","East Ham","Barking"],"Jubilee":["Stanmore","Canons Park","Queensbury","Kingsbury","Wembley Park","Neasden","Dollis Hill","Willesden Green","Kilburn","West Hampstead","Finchley Road","Swiss Cottage","St. John's Wood","Baker Street","Bond Street","Green Park","Westminster","Waterloo","Southwark","London Bridge","Bermondsey","Canada Water","Canary Wharf","North Greenwich","Canning Town","West Ham","Stratford"],"Metropolitan":["Amersham","Chalfont & Latimer","Chorleywood","Rickmansworth","Moor Park","Northwood","Northwood Hills","Pinner","North Harrow","Harrow on the Hill","Northwick Park","Preston Road","Wembley Park","Finchley Road","Baker Street","Great Portland Street","Euston Square","Kings Cross St. Pancras","Farringdon","Barbican","Moorgate","Liverpool Street","Aldgate"],"Northern":["Morden","South Wimbledon","Colliers Wood","Tooting Broadway","Tooting Bec","Balham","Clapham South","Clapham Common","Clapham North","Stockwell","Oval","Kennington","Elephant & Castle","Borough","London Bridge","Bank","Moorgate","Old Street","Angel","Kings Cross St. Pancras","Euston","Mornington Crescent","Camden Town","Kentish Town","Tufnell Park","Archway","Highgate","East Finchley","Finchley Central","West Finchley","Woodside Park","Totteridge & Whetstone","High Barnet"],"Piccadilly":["Uxbridge","Hillingdon","Ickenham","Ruislip","Ruislip Manor","Eastcote","Rayners Lane","South Harrow","Sudbury Hill","Sudbury Town","Alperton","Park Royal","North Ealing","Ealing Common","Acton Town","Turnham Green","Hammersmith","Barons Court","Earl's Court","Gloucester Road","South Kensington","Knightsbridge","Hyde Park Corner","Green Park","Piccadilly Circus","Leicester Square","Covent Garden","Holborn","Russell Square","Kings Cross St. Pancras","Caledonian Road","Holloway Road","Arsenal","Finsbury Park","Manor House","Turnpike Lane","Wood Green","Bounds Green","Arnos Grove","Southgate","Oakwood","Cockfosters"],"Victoria":["Brixton","Stockwell","Vauxhall","Pimlico","Victoria","Green Park","Oxford Circus","Warren Street","Euston","Kings Cross St. Pancras","Highbury & Islington","Finsbury Park","Seven Sisters","Tottenham Hale","Blackhorse Road","Walthamstow Central"],"Lioness":["Watford Junction","Watford High Street","Bushey","Carpenders Park","Hatch End","Headstone Lane","Harrow & Wealdstone","Kenton","South Kenton","North Wembley","Wembley Central","Stonebridge Park","Harlesden","Willesden Junction","Kensal Green","Queen's Park","Kilburn High Road","South Hampstead","Euston"],"Mildmay":["Stratford","Hackney Wick","Homerton","Hackney Central","Dalston Kingsland","Canonbury","Highbury & Islington","Caledonian Road & Barnsbury","Camden Road","Kentish Town West","Gospel Oak","Hampstead Heath","Finchley Road & Frognal","West Hampstead","Brondesbury","Brondesbury Park","Kensal Rise","Willesden Junction","Acton Central","South Acton","Gunnersbury","Kew Gardens","Richmond"],"Windrush":["Highbury & Islington","Canonbury","Dalston Junction","Haggerston","Hoxton","Shoreditch High Street","Whitechapel","Shadwell (Overground)","Wapping","Rotherhithe","Canada Water","Surrey Quays","New Cross Gate","Brockley","Honor Oak Park","Forest Hill","Sydenham","Penge West","Anerley","Norwood Junction","West Croydon"],"Weaver":["Liverpool Street","Bethnal Green (Overground)","Cambridge Heath","London Fields","Hackney Downs","Rectory Road","Stoke Newington","Stamford Hill","Seven Sisters (Overground)","Bruce Grove","White Hart Lane","Silver Street","Edmonton Green","Southbury","Turkey Street","Theobald's Grove","Cheshunt"],"Suffragette":["Gospel Oak","Upper Holloway","Crouch Hill","Harringay Green Lanes","South Tottenham","Blackhorse Road","Walthamstow Queens Road","Leyton Midland Road","Leytonstone High Road","Wanstead Park","Woodgrange Park","Barking","Barking Riverside"]},"interchanges":[{"station":"Oxford Circus","lineA":"Bakerloo","lineB":"Central"},{"station":"Embankment","lineA":"Bakerloo","lineB":"District"},{"station":"Paddington","lineA":"Bakerloo","lineB":"Elizabeth"},{"station":"Baker Street","lineA":"Bakerloo","lineB":"Hammersmith & City"},{"station":"Edgware Road","lineA":"Bakerloo","lineB":"Hammersmith & City"},{"station":"Paddington","lineA":"Bakerloo","lineB":"Hammersmith & City"},{"station":"Waterloo","lineA":"Bakerloo","lineB":"Jubilee"},{"station":"Baker Street","lineA":"Bakerloo","lineB":"Jubilee"},{"station":"Baker Street","lineA":"Bakerloo","lineB":"Metropolitan"},{"station":"Elephant & Castle","lineA":"Bakerloo","lineB":"Northern"},{"station":"Piccadilly Circus","lineA":"Bakerloo","lineB":"Piccadilly"},{"station":"Oxford Circus","lineA":"Bakerloo","lineB":"Victoria"},{"station":"Queen's Park","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Kensal Green","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Willesden Junction","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Harlesden","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Stonebridge Park","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Wembley Central","lineA":"Bakerloo","lineB":"Lioness"},{"station":"North Wembley","lineA":"Bakerloo","lineB":"Lioness"},{"station":"South Kenton","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Kenton","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Harrow & Wealdstone","lineA":"Bakerloo","lineB":"Lioness"},{"station":"Willesden Junction","lineA":"Bakerloo","lineB":"Mildmay"},{"station":"Mile End","lineA":"Central","lineB":"District"},{"station":"Bank","lineA":"Central","lineB":"DLR"},{"station":"Bond Street","lineA":"Central","lineB":"Elizabeth"},{"station":"Tottenham Court Road","lineA":"Central","lineB":"Elizabeth"},{"station":"Liverpool Street","lineA":"Central","lineB":"Elizabeth"},{"station":"Stratford","lineA":"Central","lineB":"Elizabeth"},{"station":"Liverpool Street","lineA":"Central","lineB":"Hammersmith & City"},{"station":"Mile End","lineA":"Central","lineB":"Hammersmith & City"},{"station":"Bond Street","lineA":"Central","lineB":"Jubilee"},{"station":"Stratford","lineA":"Central","lineB":"Jubilee"},{"station":"Liverpool Street","lineA":"Central","lineB":"Metropolitan"},{"station":"Bank","lineA":"Central","lineB":"Northern"},{"station":"Holborn","lineA":"Central","lineB":"Piccadilly"},{"station":"Oxford Circus","lineA":"Central","lineB":"Victoria"},{"station":"Stratford","lineA":"Central","lineB":"Mildmay"},{"station":"Liverpool Street","lineA":"Central","lineB":"Weaver"},{"station":"Ealing Broadway","lineA":"District","lineB":"Elizabeth"},{"station":"Whitechapel","lineA":"District","lineB":"Elizabeth"},{"station":"Hammersmith","lineA":"District","lineB":"Hammersmith & City"},{"station":"Aldgate East","lineA":"District","lineB":"Hammersmith & City"},{"station":"Whitechapel","lineA":"District","lineB":"Hammersmith & City"},{"station":"Stepney Green","lineA":"District","lineB":"Hammersmith & City"},{"station":"Mile End","lineA":"District","lineB":"Hammersmith & City"},{"station":"Bow Road","lineA":"District","lineB":"Hammersmith & City"},{"station":"Bromley-by-Bow","lineA":"District","lineB":"Hammersmith & City"},{"station":"West Ham","lineA":"District","lineB":"Hammersmith & City"},{"station":"Plaistow","lineA":"District","lineB":"Hammersmith & City"},{"station":"Upton Park","lineA":"District","lineB":"Hammersmith & City"},{"station":"East Ham","lineA":"District","lineB":"Hammersmith & City"},{"station":"Barking","lineA":"District","lineB":"Hammersmith & City"},{"station":"Westminster","lineA":"District","lineB":"Jubilee"},{"station":"West Ham","lineA":"District","lineB":"Jubilee"},{"station":"Ealing Common","lineA":"District","lineB":"Piccadilly"},{"station":"Acton Town","lineA":"District","lineB":"Piccadilly"},{"station":"Turnham Green","lineA":"District","lineB":"Piccadilly"},{"station":"Hammersmith","lineA":"District","lineB":"Piccadilly"},{"station":"Barons Court","lineA":"District","lineB":"Piccadilly"},{"station":"Earl's Court","lineA":"District","lineB":"Piccadilly"},{"station":"Gloucester Road","lineA":"District","lineB":"Piccadilly"},{"station":"South Kensington","lineA":"District","lineB":"Piccadilly"},{"station":"Victoria","lineA":"District","lineB":"Victoria"},{"station":"Whitechapel","lineA":"District","lineB":"Windrush"},{"station":"Barking","lineA":"District","lineB":"Suffragette"},{"station":"Canary Wharf","lineA":"DLR","lineB":"Jubilee"},{"station":"Bank","lineA":"DLR","lineB":"Northern"},{"station":"Paddington","lineA":"Elizabeth","lineB":"Hammersmith & City"},{"station":"Farringdon","lineA":"Elizabeth","lineB":"Hammersmith & City"},{"station":"Liverpool Street","lineA":"Elizabeth","lineB":"Hammersmith & City"},{"station":"Whitechapel","lineA":"Elizabeth","lineB":"Hammersmith & City"},{"station":"Bond Street","lineA":"Elizabeth","lineB":"Jubilee"},{"station":"Stratford","lineA":"Elizabeth","lineB":"Jubilee"},{"station":"Farringdon","lineA":"Elizabeth","lineB":"Metropolitan"},{"station":"Liverpool Street","lineA":"Elizabeth","lineB":"Metropolitan"},{"station":"Stratford","lineA":"Elizabeth","lineB":"Mildmay"},{"station":"Whitechapel","lineA":"Elizabeth","lineB":"Windrush"},{"station":"Liverpool Street","lineA":"Elizabeth","lineB":"Weaver"},{"station":"Baker Street","lineA":"Hammersmith & City","lineB":"Jubilee"},{"station":"West Ham","lineA":"Hammersmith & City","lineB":"Jubilee"},{"station":"Baker Street","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Great Portland Street","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Euston Square","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Kings Cross St. Pancras","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Farringdon","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Barbican","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Moorgate","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Liverpool Street","lineA":"Hammersmith & City","lineB":"Metropolitan"},{"station":"Kings Cross St. Pancras","lineA":"Hammersmith & City","lineB":"Northern"},{"station":"Moorgate","lineA":"Hammersmith & City","lineB":"Northern"},{"station":"Hammersmith","lineA":"Hammersmith & City","lineB":"Piccadilly"},{"station":"Kings Cross St. Pancras","lineA":"Hammersmith & City","lineB":"Piccadilly"},{"station":"Kings Cross St. Pancras","lineA":"Hammersmith & City","lineB":"Victoria"},{"station":"Whitechapel","lineA":"Hammersmith & City","lineB":"Windrush"},{"station":"Liverpool Street","lineA":"Hammersmith & City","lineB":"Weaver"},{"station":"Barking","lineA":"Hammersmith & City","lineB":"Suffragette"},{"station":"Wembley Park","lineA":"Jubilee","lineB":"Metropolitan"},{"station":"Finchley Road","lineA":"Jubilee","lineB":"Metropolitan"},{"station":"Baker Street","lineA":"Jubilee","lineB":"Metropolitan"},{"station":"London Bridge","lineA":"Jubilee","lineB":"Northern"},{"station":"Green Park","lineA":"Jubilee","lineB":"Piccadilly"},{"station":"Green Park","lineA":"Jubilee","lineB":"Victoria"},{"station":"West Hampstead","lineA":"Jubilee","lineB":"Mildmay"},{"station":"Stratford","lineA":"Jubilee","lineB":"Mildmay"},{"station":"Canada Water","lineA":"Jubilee","lineB":"Windrush"},{"station":"Kings Cross St. Pancras","lineA":"Metropolitan","lineB":"Northern"},{"station":"Moorgate","lineA":"Metropolitan","lineB":"Northern"},{"station":"Kings Cross St. Pancras","lineA":"Metropolitan","lineB":"Piccadilly"},{"station":"Kings Cross St. Pancras","lineA":"Metropolitan","lineB":"Victoria"},{"station":"Liverpool Street","lineA":"Metropolitan","lineB":"Weaver"},{"station":"Kings Cross St. Pancras","lineA":"Northern","lineB":"Piccadilly"},{"station":"Stockwell","lineA":"Northern","lineB":"Victoria"},{"station":"Kings Cross St. Pancras","lineA":"Northern","lineB":"Victoria"},{"station":"Euston","lineA":"Northern","lineB":"Victoria"},{"station":"Euston","lineA":"Northern","lineB":"Lioness"},{"station":"Green Park","lineA":"Piccadilly","lineB":"Victoria"},{"station":"Kings Cross St. Pancras","lineA":"Piccadilly","lineB":"Victoria"},{"station":"Finsbury Park","lineA":"Piccadilly","lineB":"Victoria"},{"station":"Euston","lineA":"Victoria","lineB":"Lioness"},{"station":"Highbury & Islington","lineA":"Victoria","lineB":"Mildmay"},{"station":"Highbury & Islington","lineA":"Victoria","lineB":"Windrush"},{"station":"Blackhorse Road","lineA":"Victoria","lineB":"Suffragette"},{"station":"Willesden Junction","lineA":"Lioness","lineB":"Mildmay"},{"station":"Canonbury","lineA":"Mildmay","lineB":"Windrush"},{"station":"Highbury & Islington","lineA":"Mildmay","lineB":"Windrush"},{"station":"Gospel Oak","lineA":"Mildmay","lineB":"Suffragette"}],"fame":{"Elephant & Castle":2,"Lambeth North":1,"Waterloo":4,"Embankment":4,"Charing Cross":2,"Piccadilly Circus":2,"Oxford Circus":3,"Regent's Park":1,"Baker Street":5,"Marylebone":1,"Edgware Road":4,"Paddington":5,"Warwick Avenue":1,"Maida Vale":1,"Kilburn Park":1,"Queen's Park":2,"Kensal Green":2,"Willesden Junction":3,"Harlesden":2,"Stonebridge Park":2,"Wembley Central":2,"North Wembley":2,"South Kenton":2,"Kenton":2,"Harrow & Wealdstone":2,"Ealing Broadway":3,"West Acton":1,"North Acton":1,"East Acton":1,"White City":1,"Shepherd's Bush":1,"Holland Park":1,"Notting Hill Gate":3,"Queensway":1,"Lancaster Gate":1,"Marble Arch":1,"Bond Street":3,"Tottenham Court Road":3,"Holborn":2,"Chancery Lane":1,"St. Paul's":1,"Bank":4,"Liverpool Street":6,"Bethnal Green":1,"Mile End":3,"Stratford":5,"Leyton":1,"Leytonstone":1,"Snaresbrook":1,"South Woodford":1,"Woodford":1,"Buckhurst Hill":1,"Loughton":1,"Debden":1,"Theydon Bois":1,"Epping":1,"Wanstead":1,"Redbridge":1,"Gants Hill":1,"Newbury Park":1,"Barkingside":1,"Fairlop":1,"Hainault":1,"West Ruislip":1,"Ruislip Gardens":1,"South Ruislip":1,"Northolt":1,"Greenford":1,"Perivale":1,"Hanger Lane":1,"Roding Valley":1,"Chigwell":1,"Grange Hill":1,"Hammersmith":4,"Goldhawk Road":2,"Shepherd's Bush Market":2,"Wood Lane":2,"Latimer Road":2,"Ladbroke Grove":2,"Westbourne Park":2,"Royal Oak":2,"Great Portland Street":3,"Euston Square":3,"Kings Cross St. Pancras":6,"Farringdon":4,"Barbican":3,"Moorgate":4,"Aldgate":2,"Tower Hill":2,"Monument":2,"Cannon Street":2,"Mansion House":2,"Blackfriars":2,"Temple":2,"Westminster":3,"St. James's Park":2,"Victoria":3,"Sloane Square":2,"South Kensington":3,"Gloucester Road":3,"High Street Kensington":2,"Bayswater":2,"Ealing Common":2,"Acton Town":2,"Chiswick Park":1,"Turnham Green":2,"Stamford Brook":1,"Ravenscourt Park":1,"Barons Court":2,"West Kensington":1,"Earl's Court":2,"Aldgate East":2,"Whitechapel":4,"Stepney Green":2,"Bow Road":2,"Bromley-by-Bow":2,"West Ham":4,"Plaistow":2,"Upton Park":2,"East Ham":2,"Barking":3,"Upney":1,"Becontree":1,"Dagenham Heathway":1,"Dagenham East":1,"Elm Park":1,"Hornchurch":1,"Upminster Bridge":1,"Upminster":2,"Kensington (Olympia)":2,"Richmond":2,"Kew Gardens":2,"Gunnersbury":2,"Wimbledon":1,"Wimbledon Park":1,"Southfields":1,"East Putney":1,"Putney Bridge":1,"Parsons Green":1,"Fulham Broadway":1,"West Brompton":2,"Shadwell":1,"Limehouse":1,"Westferry":1,"West India Quay":1,"Canary Wharf":3,"Heron Quays":1,"South Quay":1,"Crossharbour":1,"Mudchute":1,"Island Gardens":1,"Cutty Sark for Maritime Greenwich":1,"Greenwich":1,"Deptford Bridge":1,"Elverson Road":1,"Lewisham":1,"Poplar":1,"Blackwall":1,"East India":1,"Canning Town":2,"West Silvertown":1,"Pontoon Dock":1,"London City Airport":1,"King George V":1,"Woolwich Arsenal":2,"Stratford International":1,"Stratford High Street":1,"Abbey Road":1,"Star Lane":1,"Tower Gateway":1,"Royal Victoria":1,"Custom House for ExCel":2,"Prince Regent":1,"Royal Albert":1,"Beckton Park":1,"Cyprus":1,"Gallions Reach":1,"Beckton":1,"Pudding Mill Lane":1,"Bow Church":1,"Devons Road":1,"Langdon Park":1,"All Saints":1,"Heathrow Terminal 4":2,"Heathrow Terminals 2&3":2,"Hayes & Harlington":1,"Southall":1,"Hanwell":1,"West Ealing":1,"Acton Main Line":1,"Abbey Wood":1,"Heathrow Terminal 5":2,"Maryland":1,"Forest Gate":1,"Manor Park":1,"Ilford":1,"Seven Kings":1,"Goodmayes":1,"Chadwell Heath":1,"Romford":2,"Gidea Park":1,"Harold Wood":1,"Brentwood":1,"Shenfield":1,"Stanmore":1,"Canons Park":1,"Queensbury":1,"Kingsbury":1,"Wembley Park":2,"Neasden":1,"Dollis Hill":1,"Willesden Green":1,"Kilburn":1,"West Hampstead":2,"Finchley Road":2,"Swiss Cottage":1,"St. John's Wood":1,"Green Park":3,"Southwark":1,"London Bridge":2,"Bermondsey":1,"Canada Water":2,"North Greenwich":1,"Amersham":1,"Chalfont & Latimer":1,"Chorleywood":1,"Rickmansworth":1,"Moor Park":1,"Northwood":1,"Northwood Hills":1,"Pinner":1,"North Harrow":1,"Harrow on the Hill":1,"Northwick Park":1,"Preston Road":1,"Chesham":1,"Uxbridge":2,"Hillingdon":2,"Ickenham":2,"Ruislip":2,"Ruislip Manor":2,"Eastcote":2,"Rayners Lane":2,"West Harrow":1,"Watford":1,"Croxley":1,"Morden":1,"South Wimbledon":1,"Colliers Wood":1,"Tooting Broadway":1,"Tooting Bec":1,"Balham":1,"Clapham South":1,"Clapham Common":1,"Clapham North":1,"Stockwell":2,"Oval":1,"Kennington":1,"Borough":1,"Old Street":1,"Angel":1,"Euston":3,"Mornington Crescent":1,"Camden Town":1,"Chalk Farm":1,"Belsize Park":1,"Hampstead":1,"Golders Green":1,"Brent Cross":1,"Hendon Central":1,"Colindale":1,"Burnt Oak":1,"Edgware":1,"Kentish Town":1,"Tufnell Park":1,"Archway":1,"Highgate":1,"East Finchley":1,"Finchley Central":1,"West Finchley":1,"Woodside Park":1,"Totteridge & Whetstone":1,"High Barnet":1,"Leicester Square":2,"Goodge Street":1,"Warren Street":2,"Mill Hill East":1,"Hatton Cross":1,"Hounslow West":1,"Hounslow Central":1,"Hounslow East":1,"Osterley":1,"Boston Manor":1,"Northfields":1,"South Ealing":1,"Knightsbridge":1,"Hyde Park Corner":1,"Covent Garden":1,"Russell Square":1,"Caledonian Road":1,"Holloway Road":1,"Arsenal":1,"Finsbury Park":2,"Manor House":1,"Turnpike Lane":1,"Wood Green":1,"Bounds Green":1,"Arnos Grove":1,"Southgate":1,"Oakwood":1,"Cockfosters":1,"South Harrow":1,"Sudbury Hill":1,"Sudbury Town":1,"Alperton":1,"Park Royal":1,"North Ealing":1,"Brixton":1,"Vauxhall":1,"Pimlico":1,"Highbury & Islington":3,"Seven Sisters":1,"Tottenham Hale":1,"Blackhorse Road":2,"Walthamstow Central":2,"Watford Junction":1,"Watford High Street":1,"Bushey":1,"Carpenders Park":1,"Hatch End":1,"Headstone Lane":1,"Kilburn High Road":1,"South Hampstead":1,"Hackney Wick":1,"Homerton":1,"Hackney Central":1,"Dalston Kingsland":1,"Canonbury":2,"Caledonian Road & Barnsbury":1,"Camden Road":1,"Kentish Town West":1,"Gospel Oak":2,"Hampstead Heath":1,"Finchley Road & Frognal":1,"Brondesbury":1,"Brondesbury Park":1,"Kensal Rise":1,"Acton Central":1,"South Acton":1,"Shepherd's Bush (Overground)":1,"Imperial Wharf":1,"Clapham Junction":2,"Dalston Junction":1,"Haggerston":1,"Hoxton":1,"Shoreditch High Street":1,"Shadwell (Overground)":1,"Wapping":1,"Rotherhithe":1,"Surrey Quays":1,"Queens Road Peckham":1,"Peckham Rye":1,"Denmark Hill":1,"Clapham High Street":1,"Wandsworth Road":1,"New Cross Gate":1,"Brockley":1,"Honor Oak Park":1,"Forest Hill":1,"Sydenham":1,"Penge West":1,"Anerley":1,"Norwood Junction":1,"West Croydon":1,"New Cross":1,"Crystal Palace":1,"Bethnal Green (Overground)":1,"Cambridge Heath":1,"London Fields":1,"Hackney Downs":1,"Rectory Road":1,"Stoke Newington":1,"Stamford Hill":1,"Seven Sisters (Overground)":1,"Bruce Grove":1,"White Hart Lane":1,"Silver Street":1,"Edmonton Green":1,"Southbury":1,"Turkey Street":1,"Theobald's Grove":1,"Cheshunt":1,"Bush Hill Park":1,"Enfield Town":1,"Clapton":1,"St. James Street":1,"Wood Street":1,"Highams Park":1,"Chingford":1,"Upper Holloway":1,"Crouch Hill":1,"Harringay Green Lanes":1,"South Tottenham":1,"Walthamstow Queens Road":1,"Leyton Midland Road":1,"Leytonstone High Road":1,"Wanstead Park":1,"Woodgrange Park":1,"Barking Riverside":1,"Emerson Park":1},"colours":{"Bakerloo":"#B36305","Central":"#E32017","District":"#00782A","DLR":"#00A4A7","Elizabeth":"#6950A1","Hammersmith & City":"#F3A9BB","Jubilee":"#A0A5AE","Metropolitan":"#9B0056","Northern":"#000000","Piccadilly":"#003688","Victoria":"#0098D4","Lioness":"#FAA61A","Mildmay":"#0077AD","Windrush":"#ED1B00","Weaver":"#823A62","Suffragette":"#5BB972"}};
+
+/* ══════════════════════════════════════════════════════════════════
+   1. GRID GENERATOR — knows nothing about tube stations.
+      Emits a Hamiltonian path over all 25 cells plus the ordered
+      slot positions that make the solution unique.
+   ══════════════════════════════════════════════════════════════════ */
+const N = 5, CELLS = N * N;
+
+const NBRS = (() => {
+  const a = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const o = [];
+    if (r > 0)     o.push((r - 1) * N + c);
+    if (r < N - 1) o.push((r + 1) * N + c);
+    if (c > 0)     o.push(r * N + c - 1);
+    if (c < N - 1) o.push(r * N + c + 1);
+    a.push(o);
+  }
+  return a;
+})();
+
+// A 25-cell path alternates colours on the checkerboard, and the grid has
+// 13 "corner-coloured" cells to 12 of the other. So both ends of the path
+// must sit on the 13-set — the other 12 cells admit no Hamiltonian path.
+const VALID_STARTS = [...Array(CELLS).keys()].filter(i => (((i / N | 0) + (i % N)) % 2) === 0);
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = rng() * (i + 1) | 0;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function randomHamPath(rng) {
+  const start = VALID_STARTS[rng() * VALID_STARTS.length | 0];
+  const seen = new Array(CELLS).fill(false), path = [];
+  (function dfs(cur, depth) {
+    seen[cur] = true; path.push(cur);
+    if (depth === CELLS) return true;
+    for (const x of shuffle(NBRS[cur].filter(n => !seen[n]), rng)) {
+      if (dfs(x, depth + 1)) return true;
+    }
+    seen[cur] = false; path.pop(); return false;
+  })(start, 1);
+  return path;
+}
+
+// Count solutions for a given ordered list of checkpoint cells (cap early).
+function solve(order, cap = 2) {
+  const pos = new Map(order.map((c, i) => [c, i]));
+  const seen = new Array(CELLS).fill(false), path = [], sols = [];
+  (function dfs(cur, depth, next) {
+    if (sols.length >= cap) return;
+    if (depth === CELLS) { if (next === order.length) sols.push(path.slice()); return; }
+    for (const x of NBRS[cur]) {
+      if (seen[x]) continue;
+      const p = pos.get(x);
+      if (p !== undefined && p !== next) continue;   // checkpoint reached out of turn
+      seen[x] = true; path.push(x);
+      dfs(x, depth + 1, p === undefined ? next : next + 1);
+      path.pop(); seen[x] = false;
+      if (sols.length >= cap) return;
+    }
+  })(order[0], (seen[order[0]] = true, path.push(order[0]), 1), 1);
+  return sols;
+}
+
+function generateGrid(rng) {
+  const path = randomHamPath(rng);
+  let slots = [0, CELLS - 1];                       // both ends are always stations
+
+  // Add checkpoints where a rival solution first diverges from the real path.
+  for (let guard = 0; guard < 40; guard++) {
+    const order = slots.slice().sort((a, b) => a - b).map(i => path[i]);
+    const sols = solve(order, 2);
+    if (sols.length === 1) break;
+    const decoy = sols.find(s => s.some((c, i) => c !== path[i])) || sols[1];
+    let d = 0; while (d < CELLS && decoy[d] === path[d]) d++;
+    let cand = Math.min(d, CELLS - 2);
+    while (slots.includes(cand) && cand < CELLS - 2) cand++;
+    if (slots.includes(cand)) break;
+    slots.push(cand);
+  }
+
+  // Drop any checkpoint that isn't load-bearing.
+  slots.sort((a, b) => a - b);
+  for (const s of shuffle(slots.slice(1, -1), rng)) {
+    const trial = slots.filter(i => i !== s);
+    if (solve(trial.slice().sort((a, b) => a - b).map(i => path[i]), 2).length === 1) slots = trial;
+  }
+  return { path, slots: slots.sort((a, b) => a - b) };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2a. SINGLE-LINE STATION PICKER (Easy mode) — an ordered subsequence
+       of one line. Stations need not be adjacent stops; they only
+       have to appear in line order between the start and end station.
+   ══════════════════════════════════════════════════════════════════ */
+const EASY_CFG = { minGap: 2, span: [10, 22], fame: 0 };
+
+// Random composition of `total` into `parts` gaps, each at least `minGap`.
+function randomGaps(rng, parts, total, minGap) {
+  const slack = total - parts * minGap;
+  if (slack < 0) return null;
+  const cuts = [];
+  for (let i = 0; i < parts - 1; i++) cuts.push(rng() * (slack + 1) | 0);
+  cuts.sort((a, b) => a - b);
+  const gaps = []; let prev = 0;
+  for (const c of cuts) { gaps.push(c - prev); prev = c; }
+  gaps.push(slack - prev);
+  return gaps.map(g => g + minGap);
+}
+
+function pickStations(rng, n, stops, cfg) {
+  const L = stops.length;
+
+  let minGap = cfg.minGap;
+  while ((n - 1) * minGap > L - 1 && minGap > 1) minGap--;
+  if ((n - 1) * minGap > L - 1) return null;
+
+  const need   = (n - 1) * minGap;
+  const spanHi = Math.min(cfg.span[1], L - 1);
+  const spanLo = Math.min(Math.max(cfg.span[0], need), spanHi);
+  if (need > spanHi) return null;
+
+  let best = null, bestScore = -Infinity;
+  for (let t = 0; t < 60; t++) {
+    const span = spanLo + (rng() * (spanHi - spanLo + 1) | 0);
+    const gaps = randomGaps(rng, n - 1, span, minGap);
+    if (!gaps) continue;
+    const lo  = rng() * (L - span) | 0;
+    const idx = [lo];
+    for (const g of gaps) idx.push(idx[idx.length - 1] + g);
+
+    const reversed = rng() < 0.5;                      // direction is arbitrary per line
+    const seq = (reversed ? idx.slice().reverse() : idx).map(i => stops[i]);
+    const fame = seq.reduce((a, s) => a + (DATA.fame[s] || 1), 0) / n;
+    const score = fame * cfg.fame + rng() * 0.4;
+    if (score > bestScore) { bestScore = score; best = { seq, reversed }; }
+  }
+  return best;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2b. TWO-LINE STATION PICKER (Hard mode) — two ordered subsequences
+       on two DIFFERENT lines, glued at a real interchange station
+       picked at random from every real interchange in the network.
+       The player is told neither line's name nor which stations
+       belong to which — only the grid, the start and the finish.
+       Finding the interchange IS the puzzle.
+   ══════════════════════════════════════════════════════════════════ */
+const HARD_CFG = { minGap: 1, span: 12 };
+
+// Pick k ordered stops anchored so one end sits exactly at pivotIdx,
+// running toward `dir` (+1/-1). Returns names, pivot first.
+function pickAnchored(rng, stops, pivotIdx, dir, k, minGap, maxSpan) {
+  if (k <= 1) return [stops[pivotIdx]];
+  const room = dir > 0 ? stops.length - 1 - pivotIdx : pivotIdx;
+  const need = (k - 1) * minGap;
+  if (need > room) return null;
+  const spanHi = Math.min(maxSpan, room);
+  if (need > spanHi) return null;
+  const span = need + (rng() * (spanHi - need + 1) | 0);
+  const gaps = randomGaps(rng, k - 1, span, minGap);
+  if (!gaps) return null;
+  const idx = [pivotIdx];
+  for (const g of gaps) idx.push(idx[idx.length - 1] + g * dir);
+  return idx.map(i => stops[i]);
+}
+
+function pickTwoLineStations(rng, n, cfg) {
+  const candidates = DATA.interchanges;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const pivot = candidates[rng() * candidates.length | 0];
+    const A = DATA.lines[pivot.lineA], B = DATA.lines[pivot.lineB];
+    const ai = A.indexOf(pivot.station), bi = B.indexOf(pivot.station);
+
+    // Valid splits: nA (line A side incl. pivot) + nB (line B side incl. pivot) - 1 = n.
+    const splits = [];
+    for (let nA = 2; nA <= n; nA++) { const nB = n - nA + 1; if (nB >= 2) splits.push([nA, nB]); }
+    if (!splits.length) continue;
+    const [nA, nB] = splits[rng() * splits.length | 0];
+
+    const aDirOptions = [-1, 1].filter(dir => (dir > 0 ? A.length - 1 - ai : ai) >= (nA - 1) * cfg.minGap);
+    const bDirOptions = [-1, 1].filter(dir => (dir > 0 ? B.length - 1 - bi : bi) >= (nB - 1) * cfg.minGap);
+    if (!aDirOptions.length || !bDirOptions.length) continue;
+    const aDir = aDirOptions[rng() * aDirOptions.length | 0];
+    const bDir = bDirOptions[rng() * bDirOptions.length | 0];
+
+    const aSeq = pickAnchored(rng, A, ai, aDir, nA, cfg.minGap, cfg.span);
+    const bSeq = pickAnchored(rng, B, bi, bDir, nB, cfg.minGap, cfg.span);
+    if (!aSeq || !bSeq) continue;
+
+    // Line A side reversed (start ... pivot) + line B side minus pivot (pivot ... finish).
+    const seq = [...aSeq.slice().reverse(), ...bSeq.slice(1)];
+    if (new Set(seq).size !== seq.length) continue;   // guard against any name collision
+    return { seq, pivot: pivot.station, lineA: pivot.lineA, lineB: pivot.lineB };
+  }
+  return null;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   3. COMPOSE — zip slot i to station i. The grid generator and either
+      picker never constrain each other, so this always succeeds.
+      Easy mode tries a fresh random line each attempt; Hard mode's
+      picker already re-rolls a fresh random interchange each attempt.
+      Either way, no single line or pairing is ever assumed.
+   ══════════════════════════════════════════════════════════════════ */
+const LINE_NAMES = Object.keys(DATA.lines);
+
+function makePuzzle(seed, mode) {
+  const rng = mulberry32(seed);
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const { path, slots } = generateGrid(rng);
+    if (mode === "hard") {
+      const picked = pickTwoLineStations(rng, slots.length, HARD_CFG);
+      if (!picked) continue;
+      return {
+        solution: path, cells: slots.map(i => path[i]), stations: picked.seq,
+        lineA: picked.lineA, lineB: picked.lineB, pivotIdx: picked.seq.indexOf(picked.pivot), mode: "hard",
+      };
+    } else {
+      const lineName = LINE_NAMES[rng() * LINE_NAMES.length | 0];
+      const picked = pickStations(rng, slots.length, DATA.lines[lineName], EASY_CFG);
+      if (!picked) continue;
+      return { solution: path, cells: slots.map(i => path[i]), stations: picked.seq, lineName, reversed: picked.reversed, mode: "easy" };
+    }
+  }
+  return null;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   4. DAILY SEEDING — anchored to LONDON's calendar date, not the
+      device's local date. Every player worldwide must land on the
+      same puzzle for a given day, or the leaderboard compares people
+      who solved different puzzles. (Mirrors tubed's own approach.)
+   ══════════════════════════════════════════════════════════════════ */
+function londonDateParts() {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const get = t => parts.find(p => p.type === t).value;
+    return { y: +get("year"), m: +get("month"), d: +get("day") };
+  } catch (e) {
+    const dt = new Date();
+    return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+  }
+}
+const EPOCH = Date.UTC(2026, 8, 27);   // 2026-09-27 = Threaded #1
+function todayKey() { const p = londonDateParts(); return p.y * 10000 + p.m * 100 + p.d; }
+function isoToday() { const p = londonDateParts(); return p.y + "-" + String(p.m).padStart(2, "0") + "-" + String(p.d).padStart(2, "0"); }
+function dailySeed(mode) { return todayKey() * 2 + (mode === "hard" ? 1 : 0); }
+function puzzleNumber() {
+  const p = londonDateParts();
+  const days = Math.floor((Date.UTC(p.y, p.m - 1, p.d) - EPOCH) / 86400000) + 1;
+  return Math.max(1, days);
+}
+function fmtTime(s) { return (s / 60 | 0) + ":" + String(s % 60).padStart(2, "0"); }
+
+/* ══════════════════════════════════════════════════════════════════
+   5. LOCAL HISTORY — per-mode, per-device, one entry per day.
+      Same shape/spirit as tubed's history, kept local (no backend)
+      exactly as tubed's is — the leaderboard below is the only piece
+      that talks to a server.
+   ══════════════════════════════════════════════════════════════════ */
+function historyKey(m) { return "threaded_hist_" + m; }
+function getHistory(m) {
+  try { return JSON.parse(localStorage.getItem(historyKey(m))) || []; }
+  catch (e) { return []; }
+}
+function pushHistory(m, entry) {
+  try {
+    const h = getHistory(m).filter(e => e.date !== entry.date);
+    h.push(entry);
+    localStorage.setItem(historyKey(m), JSON.stringify(h.slice(-60)));
+  } catch (e) { /* private browsing / storage blocked — history just won't persist */ }
+}
+function todaysRecord(m) { return getHistory(m).find(e => e.date === isoToday()) || null; }
+
+// Mirrors tubed's own pickDefaultMode(): land on whichever of today's two
+// puzzles isn't finished yet. Once Easy is done, default to Hard — whether
+// that means "go play it" or, if Hard's also done, "here's its result" is
+// decided by newPuzzle()/showSavedResult() right after this runs.
+function pickDefaultMode() { return todaysRecord("easy") ? "hard" : "easy"; }
+
+function renderHistoryList(m) {
+  const rows = getHistory(m).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const el = $("histList");
+  if (!rows.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px 0;">No games played yet</div>';
+    return;
+  }
+  el.innerHTML = rows.map(e => `<div class="hist-row">
+      <div><div>${e.mode === "hard" ? "Hard" : "Easy"} · #${e.num}</div><div class="hist-sub">${fmtTime(e.time)} · ${e.hints} hint${e.hints === 1 ? "" : "s"} · ${e.date}</div></div>
+      <div style="font-size:18px;">${e.hints === 0 ? "✨" : "🚇"}</div>
+    </div>`).join("");
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   6. LEADERBOARD (Supabase) — same project + pattern as tubed's own
+      scores/get_leaderboard_stats, in a separate threaded_scores
+      table. Fire-and-forget: never blocks the UI, silent-fails.
+   ══════════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = "https://hngjziobiblvnosbmgsx.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_hs_dkr1WA-FIbLy3uBwh5w_GMZyg4-N";
+const LB_MIN_PLAYERS = 5, LB_MAX_PCT = 50;
+const _leaderboardStatsCache = {};
+const _LB_SHARE_DEFAULT = { share: "&#128172; Share my result", copy: "&#128203; Copy to clipboard" };
+let _lbShareLabel = _LB_SHARE_DEFAULT;
+
+function getPlayerId() {
+  const KEY = "threaded_player_id";
+  try {
+    let id = localStorage.getItem(KEY);
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem(KEY, id); }
+    return id;
+  } catch (e) { return null; }
+}
+
+function submitScore(s) {
+  const playerId = getPlayerId();
+  if (!playerId) return;
+  fetch(SUPABASE_URL + "/rest/v1/threaded_scores", {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json", Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      puzzle_date: s.date, mode: s.mode, player_id: playerId,
+      completion_secs: Math.min(Math.max(0, s.secs), 21600),
+      hints_used: s.hints,
+    }),
+  })
+    .then(() => loadLeaderboardStats(s.date, s.mode))
+    .catch(e => console.warn("[threaded] leaderboard submit failed:", e.message));
+}
+
+function loadLeaderboardStats(date, m) {
+  const playerId = getPlayerId();
+  if (!playerId || !$("leaderboard-stats")) return;
+  fetch(SUPABASE_URL + "/rest/v1/rpc/get_threaded_leaderboard_stats", {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_date: date, p_mode: m, p_player: playerId }),
+  })
+    .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+    .then(stats => {
+      _leaderboardStatsCache[m + ":" + date] = stats;
+      if (mode !== m || isoToday() !== date) return;   // board may have moved on while this was in flight
+      renderLeaderboardBlock(stats);
+    })
+    .catch(e => console.warn("[threaded] leaderboard stats failed:", e.message));
+}
+
+function _lbShowPct(stats) {
+  return !!stats && stats.total_players >= LB_MIN_PLAYERS && stats.top_pct != null && stats.top_pct <= LB_MAX_PCT;
+}
+function _lbAnchorLine(stats) {
+  if (!stats || stats.median_secs == null || (stats.sample_count || 0) < 3) return "";
+  return "⏱ Typical solve: " + fmtTime(Math.round(stats.median_secs));
+}
+
+function renderLeaderboardBlock(stats) {
+  const slot = $("leaderboard-stats"); if (!slot) return;
+  const anchor = _lbAnchorLine(stats);
+  const parts = [];
+  if (_lbShowPct(stats)) {
+    const tier = stats.top_pct <= 1 ? "tier-elite" : stats.top_pct <= 10 ? "tier-good" : "tier-mid";
+    const podium = (stats.is_top3 && stats.total_players >= LB_MIN_PLAYERS)
+      ? '<div class="lb-rank">🏆 You\'re #' + stats.my_rank + " today</div>" : "";
+    parts.push('<div class="lb-band ' + tier + (anchor ? "" : " lb-solo") + '"><div class="lb-pct">📊 TOP ' + stats.top_pct + '% TODAY</div>' + podium + "</div>");
+    _lbShareLabel = { share: "&#128172; Share your Top " + stats.top_pct + "%", copy: "&#128203; Copy your Top " + stats.top_pct + "%" };
+    const sb = $("shareBtn"); if (sb && !sb.classList.contains("success")) sb.innerHTML = _lbShareLabel.share;
+    const cb = $("copyBtn"); if (cb && !cb.classList.contains("copied")) cb.innerHTML = _lbShareLabel.copy;
+  }
+  if (anchor) parts.push('<div class="lb-anchor">' + anchor + "</div>");
+  slot.innerHTML = parts.join("");
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   7. SHARE / COPY — Wordle-style emoji blocks scaled by hints used
+      (there's no "optimal route" axis here, so hints is the closest
+      analogue to tubed's diff-from-optimal), plus the leaderboard
+      percentile when one's available.
+   ══════════════════════════════════════════════════════════════════ */
+const SITE_URL = "playthreaded.co.uk"; // TODO: swap for the real domain once this is hosted
+
+function buildShareBlocks(hints) {
+  if (hints === 0) return "🟩🟩🟩🟩🟩";
+  if (hints === 1) return "🟩🟩🟩🟩🟨";
+  if (hints === 2) return "🟩🟩🟨🟨⬜";
+  return "🟨🟨⬜⬜⬜";
+}
+function buildShareText(secs, hints) {
+  const hintsLine = hints === 0 ? "🧭 No hints — nailed it solo"
+    : hints === 1 ? "🧭 1 hint — a small nudge"
+    : hints === 2 ? "🧭 2 hints — needed a steer"
+    : "🧭 3 hints — talked me through it";
+  // Naming the line is safe post-solve in Easy (start/finish are shown to
+  // everyone up front anyway). Hard never names its lines here — a share is
+  // public and other players may not have solved TODAY'S puzzle yet, so
+  // this can't spoil the interchange for them even after the sharer's won.
+  const lineNote = mode === "hard" ? "" : "\n📍 " + puzzle.lineName + " line";
+  const challengeLine = mode === "hard"
+    ? "🔀 Two lines cross this grid — find where."
+    : "🗺️ Trace the " + puzzle.lineName + " line faster than me.";
+  const lines = [
+    "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs) + lineNote,
+    buildShareBlocks(hints),
+    hintsLine,
+  ];
+  const lb = _leaderboardStatsCache[mode + ":" + isoToday()];
+  if (_lbShowPct(lb)) lines.push("📊 Top " + lb.top_pct + "% today");
+  lines.push(challengeLine, "➡️ " + SITE_URL);
+  return lines.join("\n");
+}
+function updateShareButtons() {
+  const hasShare = typeof navigator.share === "function";
+  $("shareBtn").hidden = !hasShare;
+  $("copyBtn").hidden = hasShare;
+}
+async function shareResult() {
+  if (!lastResult) return;
+  const text = buildShareText(lastResult.secs, lastResult.hints);
+  const btn = $("shareBtn");
+  try {
+    await navigator.share({ text });
+    if (btn) { btn.innerHTML = "✓ Shared!"; btn.classList.add("success"); setTimeout(() => { btn.innerHTML = _lbShareLabel.share; btn.classList.remove("success"); }, 2500); }
+  } catch (e) { /* user cancelled the share sheet — nothing to do */ }
+}
+async function copyResult() {
+  if (!lastResult) return;
+  const text = buildShareText(lastResult.secs, lastResult.hints);
+  const btn = $("copyBtn");
+  try {
+    await navigator.clipboard.writeText(text);
+    if (btn) { btn.innerHTML = "✓ Copied!"; btn.classList.add("copied"); setTimeout(() => { btn.innerHTML = _lbShareLabel.copy; btn.classList.remove("copied"); }, 2500); }
+  } catch (e) { prompt("Copy your result:", text); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   8. GAME
+   ══════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const boardEl = $("board"), cellsEl = $("cells"), polyA = $("polyA"), polyB = $("polyB");
+
+const CELL = 100, GAP = 8;                    // svg units; matches the css cell gap closely
+const centre = i => [ (i % N) * (CELL + GAP) + CELL / 2, (i / N | 0) * (CELL + GAP) + CELL / 2 ];
+
+// Practice mode (unlimited random puzzles alongside the daily pair) is
+// built and working, but hidden from the UI for now — Douglas wants it
+// held in reserve as a later feature rather than removed. Everything
+// below still runs correctly end to end; flipping this back to true and
+// removing the two `hidden = true` lines right after `newPuzzle()` at the
+// bottom of this script is the entire re-enable.
+const PRACTICE_ENABLED = false;
+
+let puzzle, stationAt, path, drawing = false, t0 = null, tick = null;
+let mode = "easy", playMode = "daily", won = false;
+let hintsLeft = 3, hintTimeout = null;
+let todaysRec = null, lastResult = null;
+
+function currentSeed() { return playMode === "daily" ? dailySeed(mode) : (Math.random() * 1e9 | 0); }
+function otherMode(m) { return m === "hard" ? "easy" : "hard"; }
+
+// Nudges a player who's solved one of today's two puzzles toward the
+// other, wherever they currently are (board or results).
+function updateCrossModeButton() {
+  const om = otherMode(mode);
+  const show = playMode === "daily" && !!todaysRecord(mode) && !todaysRecord(om);
+  const label = "Try today's " + (om === "hard" ? "Hard" : "Easy") + " puzzle";
+  [$("tryOtherBtn"), $("tryOtherBoardBtn")].forEach(btn => {
+    btn.hidden = !show;
+    btn.textContent = label;
+    btn.classList.toggle("hard", om === "hard");
+  });
+}
+function switchToMode(newMode) {
+  mode = newMode;
+  [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x.dataset.mode === newMode));
+  newPuzzle();
+}
+
+function showBoard() { $("resultsView").hidden = true; $("boardView").hidden = false; }
+function showResultsPanel() { $("boardView").hidden = true; $("resultsView").hidden = false; }
+
+function newPuzzle() {
+  puzzle = makePuzzle(currentSeed(), mode);
+  stationAt = new Map(puzzle.cells.map((c, i) => [c, i]));
+  path = [puzzle.cells[0]];
+  won = false; t0 = null; hintsLeft = 3; lastResult = null;
+  clearInterval(tick); tick = null; clearTimeout(hintTimeout);
+  $("timer").textContent = "0:00";
+  $("timer-box").classList.remove("done");
+  buildBoard(); render(); updateHintButton();
+
+  const first = puzzle.stations[0], last = puzzle.stations[puzzle.stations.length - 1];
+  $("fromName").textContent = first;
+  $("toName").textContent = last;
+
+  const isHard = mode === "hard";
+  if (isHard) {
+    $("dir").textContent = "Two lines cross this grid — find where.";
+    document.documentElement.style.setProperty("--line", DATA.colours[puzzle.lineA] || "#666");
+  } else {
+    const lineStops = DATA.lines[puzzle.lineName];
+    const towardTerminus = puzzle.reversed ? lineStops[0] : lineStops[lineStops.length - 1];
+    $("dir").textContent = puzzle.lineName + " line · toward " + towardTerminus;
+    document.documentElement.style.setProperty("--line", DATA.colours[puzzle.lineName] || "#666");
+  }
+  $("footerHint").innerHTML = isHard
+    ? "Somewhere in this grid one Underground line hands off to another. Find the interchange and the order will click."
+    : "Drag from <strong>START</strong> through every square, hitting the stations in line order.";
+
+  $("shuffleRow").hidden = playMode !== "daily" || !PRACTICE_ENABLED;   // was inverted; fixed while dormant
+  updateGsub();
+
+  todaysRec = playMode === "daily" ? todaysRecord(mode) : null;
+  lastResult = todaysRec ? { secs: todaysRec.time, hints: todaysRec.hints } : null;
+  $("playRow").hidden = !!todaysRec;
+  $("viewResultsRow").hidden = !todaysRec;
+  if (todaysRec) {
+    // Already solved today — "Back to puzzle" should show the completed
+    // grid, not the blank one newPuzzle() just built.
+    path = puzzle.solution.slice();
+    won = true;
+    $("timer").textContent = fmtTime(todaysRec.time);
+    $("timer-box").classList.add("done");
+    $("status").textContent = "";
+    render();
+  } else {
+    startTimer();   // ticking from the moment the board appears, not the first move
+  }
+  updateDailyBadge();
+  updateModeChecks();
+  updateCrossModeButton();
+  showBoard();
+}
+
+function updateGsub() {
+  $("gsub").textContent = (playMode === "daily" ? "Daily Puzzle #" + puzzleNumber() : "Practice Puzzle")
+    + " · " + (mode === "hard" ? "Hard" : "Easy");
+}
+function updateDailyBadge() {
+  $("dailyBadge").hidden = true;
+  if (playMode !== "daily" || !todaysRec) return;
+  $("dailyBadge").textContent = "✓ Solved today — " + fmtTime(todaysRec.time)
+    + (todaysRec.hints ? " (" + todaysRec.hints + " hint" + (todaysRec.hints === 1 ? "" : "s") + ")" : "");
+  $("dailyBadge").hidden = false;
+}
+function updateModeChecks() {
+  const showTicks = playMode === "daily";
+  $("check-easy").hidden = !(showTicks && todaysRecord("easy"));
+  $("check-hard").hidden = !(showTicks && todaysRecord("hard"));
+}
+
+function buildBoard() {
+  cellsEl.innerHTML = "";
+  for (let i = 0; i < CELLS; i++) {
+    const d = document.createElement("div");
+    d.className = "c"; d.dataset.cell = i;
+    if (stationAt.has(i)) {
+      const n = stationAt.get(i), name = puzzle.stations[n], isLast = n === puzzle.stations.length - 1;
+      d.classList.add("station");
+      d.title = name;
+      if (n === 0) d.classList.add("start"); else if (isLast) d.classList.add("finish");
+      d.innerHTML = '<span class="nm">' + name + '</span>';
+    }
+    cellsEl.appendChild(d);
+  }
+}
+
+// Which cell in the drawn path is the interchange, and which line's colour
+// is "active" right now — the path stays on the first line's real colour
+// until the player has actually crossed the interchange, then it switches
+// to the second line's. Nothing is revealed before that point; this is a
+// retroactive confirmation, not a hint.
+function splitPos() {
+  if (puzzle.mode !== "hard") return -1;
+  return path.findIndex(c => stationAt.get(c) === puzzle.pivotIdx);
+}
+function primaryColour()   { return DATA.colours[puzzle.mode === "hard" ? puzzle.lineA : puzzle.lineName] || "#666"; }
+function secondaryColour() { return puzzle.mode === "hard" ? (DATA.colours[puzzle.lineB] || "#666") : null; }
+
+// Black or white, whichever reads better against one colour (or, for the
+// interchange split, the average of both halves).
+function contrastText(hexes) {
+  const arr = Array.isArray(hexes) ? hexes : [hexes];
+  const lum = arr.reduce((sum, hex) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+    return sum + (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }, 0) / arr.length;
+  return lum > 0.55 ? "#000" : "#fff";
+}
+
+// Mid stations (start/finish keep their own green/yellow) get shaded with
+// the real line colour once the drawn path actually reaches them —
+// confirming progress, never revealing ahead of time. In Hard mode the
+// interchange cell itself is a hard 50/50 split of both line colours.
+function styleStationCells() {
+  const visited = countStations();
+  const lastN = puzzle.stations.length - 1;
+  puzzle.cells.forEach((cell, n) => {
+    if (n === 0 || n === lastN) return;
+    const el = cellsEl.children[cell];
+    const nm = el.querySelector(".nm");
+    if (n >= visited) { el.style.background = ""; if (nm) nm.style.color = ""; return; }
+    let bg, colour;
+    if (puzzle.mode === "hard" && n === puzzle.pivotIdx) {
+      const a = DATA.colours[puzzle.lineA] || "#666", b = DATA.colours[puzzle.lineB] || "#666";
+      bg = "linear-gradient(90deg, " + a + " 50%, " + b + " 50%)";
+      colour = contrastText([a, b]);
+    } else if (puzzle.mode === "hard") {
+      const c = (n < puzzle.pivotIdx ? DATA.colours[puzzle.lineA] : DATA.colours[puzzle.lineB]) || "#666";
+      bg = c; colour = contrastText(c);
+    } else {
+      const c = DATA.colours[puzzle.lineName] || "#666";
+      bg = c; colour = contrastText(c);
+    }
+    el.style.background = bg;
+    if (nm) nm.style.color = colour;
+  });
+}
+
+function render() {
+  const sp = splitPos();
+  const pts = path.map(c => centre(c).join(","));
+  const activeColour = sp === -1 ? primaryColour() : secondaryColour();
+  polyA.setAttribute("points", (sp === -1 ? pts : pts.slice(0, sp + 1)).join(" "));
+  polyA.setAttribute("stroke", primaryColour());
+  polyB.setAttribute("points", sp === -1 ? "" : pts.slice(sp).join(" "));
+  polyB.setAttribute("stroke", sp === -1 ? "none" : activeColour);
+  boardEl.style.setProperty("--head-color", activeColour);
+  const head = path[path.length - 1];
+  [...cellsEl.children].forEach((el, i) => {
+    el.classList.toggle("head", i === head && !won);
+  });
+  styleStationCells();
+  if (!won) {
+    const left = CELLS - path.length;
+    $("status").textContent = left === 0 ? "" : left + " square" + (left === 1 ? "" : "s") + " to fill";
+  }
+  updateHintButton();
+}
+
+function startTimer() {
+  if (t0 !== null) return;
+  t0 = Date.now();
+  tick = setInterval(() => {
+    const s = (Date.now() - t0) / 1000 | 0;
+    $("timer").textContent = fmtTime(s);
+  }, 250);
+}
+
+function adjacent(a, b) { return NBRS[a].includes(b); }
+
+// Once a puzzle is SOLVED, naming its line(s) no longer spoils anything —
+// the challenge is over. Easy always shows its line; Hard reveals the
+// interchange as a satisfying "so that's what it was" payoff, same spirit
+// as tubed showing the full optimal route only after you've submitted.
+function resultSubText() {
+  const from = puzzle.stations[0], to = puzzle.stations[puzzle.stations.length - 1];
+  if (puzzle.mode === "hard") {
+    const pivotName = puzzle.stations[puzzle.pivotIdx];
+    return from + " → " + to + "  ·  " + puzzle.lineA + " ↔ " + puzzle.lineB + " via " + pivotName;
+  }
+  return from + " → " + to + "  ·  " + puzzle.lineName + " line";
+}
+
+function handleWin() {
+  const secs = t0 !== null ? (Date.now() - t0) / 1000 | 0 : 0;
+  const hints = 3 - hintsLeft;
+  const num = puzzleNumber();
+  lastResult = { secs, hints };
+  $("timer-box").classList.add("done");
+
+  $("resTitle").textContent = hints === 0 ? "Flawless!" : "Solved!";
+  $("resSub").textContent = resultSubText();
+  $("resTime").textContent = fmtTime(secs);
+  $("resHints").textContent = String(hints);
+  $("resPuzzleNum").textContent = "Threaded #" + num + " · " + (mode === "hard" ? "Hard" : "Easy");
+  $("leaderboard-stats").innerHTML = "";
+
+  if (playMode === "daily") {
+    const entry = { date: isoToday(), mode, num, time: secs, hints };
+    pushHistory(mode, entry);
+    todaysRec = entry;
+    $("practiceNote").hidden = true;
+    $("histLbl").hidden = false; $("histList").hidden = false;
+    renderHistoryList(mode);
+    submitScore({ date: isoToday(), mode, secs, hints });
+    updateDailyBadge();
+    updateModeChecks();
+  } else {
+    $("practiceNote").hidden = false;
+    $("histLbl").hidden = true; $("histList").hidden = true;
+  }
+
+  updateShareButtons();
+  updateCrossModeButton();
+  $("playRow").hidden = true; $("viewResultsRow").hidden = false;
+  showResultsPanel();
+}
+
+function tryExtend(cell) {
+  if (won) return;
+  const head = path[path.length - 1];
+  if (cell === head) return;
+
+  if (path.length > 1 && cell === path[path.length - 2]) {   // drag back to erase
+    path.pop(); render(); return;
+  }
+  if (!adjacent(head, cell) || path.includes(cell)) return;
+
+  // A station square may only be entered when it is the next one on the line.
+  if (stationAt.has(cell) && stationAt.get(cell) !== countStations()) {
+    const el = cellsEl.children[cell];
+    el.classList.remove("bad"); void el.offsetWidth; el.classList.add("bad");
+    return;
+  }
+  startTimer();
+  path.push(cell);
+  // Uniqueness guarantees the only complete in-order path is the intended one.
+  if (path.length === CELLS) { won = true; clearInterval(tick); tick = null; handleWin(); }
+  render();
+}
+
+function countStations() { return path.filter(c => stationAt.has(c)).length; }
+
+function cellFromEvent(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const c = el && el.closest("[data-cell]");
+  return c ? +c.dataset.cell : null;
+}
+
+boardEl.addEventListener("pointerdown", e => {
+  const cell = cellFromEvent(e);
+  if (cell === null) return;
+  e.preventDefault();
+  boardEl.setPointerCapture(e.pointerId);
+  if (cell === puzzle.cells[0] && path.length > 1) { path = [puzzle.cells[0]]; won = false; render(); }
+  drawing = true;
+  tryExtend(cell);
+});
+boardEl.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const cell = cellFromEvent(e);
+  if (cell !== null) tryExtend(cell);
+});
+addEventListener("pointerup", () => { drawing = false; });
+addEventListener("pointercancel", () => { drawing = false; });
+
+/* ---- hints ---- */
+function updateHintButton() {
+  $("hint").textContent = "Hint (" + hintsLeft + ")";
+  $("hint").disabled = hintsLeft <= 0 || won;
+}
+function useHint() {
+  if (won || hintsLeft <= 0) return;
+  const onSolution = path.every((c, i) => c === puzzle.solution[i]);
+  clearTimeout(hintTimeout);
+  if (!onSolution) {
+    $("status").textContent = "That path won't complete the grid — try Undo or Reset.";
+    hintTimeout = setTimeout(render, 2600);
+    return;
+  }
+  hintsLeft--;
+  const nextCell = puzzle.solution[path.length];
+  const label = stationAt.has(nextCell) ? puzzle.stations[stationAt.get(nextCell)] : null;
+  startTimer();
+  path.push(nextCell);
+  if (path.length === CELLS) {
+    won = true; clearInterval(tick); tick = null;
+    render();
+    handleWin();
+    return;
+  }
+  render();
+  const el = cellsEl.children[nextCell];
+  el.classList.remove("hinted"); void el.offsetWidth; el.classList.add("hinted");
+  $("status").textContent = label ? "Hint: drew " + label : "Hint: drew the next square";
+  hintTimeout = setTimeout(render, 2600);
+}
+
+/* ---- modals ---- */
+function openModal(id) { const m = $(id); m.style.display = "flex"; requestAnimationFrame(() => m.classList.add("open")); }
+function closeModal(id) { const m = $(id); m.classList.remove("open"); setTimeout(() => { m.style.display = "none"; }, 200); }
+function closeOnBg(e, id) { if (e.target.id === id) closeModal(id); }
+
+/* ---- feedback (web3forms — same public access key tubed uses) ---- */
+async function submitFeedback() {
+  const msg = $("feedbackMsg").value.trim();
+  if (!msg) { $("feedbackMsg").focus(); return; }
+  const email = $("feedbackEmail").value.trim();
+  const btn = $("feedbackSendBtn");
+  btn.disabled = true; btn.textContent = "Sending...";
+  const payload = {
+    access_key: "24bf0458-2dcb-492b-840c-a8e37b6a8b7d",
+    subject: "Threaded Feedback - Puzzle #" + puzzleNumber(),
+    from_name: "Threaded Player",
+    message: msg,
+    email: email || "noreply@playtubed.co.uk",
+    // Line identity included here even for Hard mode — this is a private
+    // support channel, not anything the player sees, so it's just useful
+    // debugging context for a specific puzzle report.
+    puzzle: puzzle ? "#" + puzzleNumber() + " - " + mode + " - " + puzzle.stations[0] + " → " + puzzle.stations[puzzle.stations.length - 1]
+      + " (" + (mode === "hard" ? puzzle.lineA + " ↔ " + puzzle.lineB : puzzle.lineName) + ")" : "Unknown",
+    botcheck: "",
+  };
+  try {
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      $("feedbackFormWrap").hidden = true;
+      $("feedbackSuccess").hidden = false;
+      setTimeout(() => closeModal("feedbackOverlay"), 3000);
+    } else {
+      alert("Error sending feedback: " + data.message);
+      btn.disabled = false; btn.textContent = "Send feedback";
+    }
+  } catch (e) {
+    alert("Something went wrong. Please try again.");
+    btn.disabled = false; btn.textContent = "Send feedback";
+  }
+}
+
+/* ---- wiring ---- */
+$("hint").onclick  = useHint;
+$("undo").onclick  = () => { if (path.length > 1 && !won) { path.pop(); render(); } };
+$("reset").onclick = () => { path = [puzzle.cells[0]]; won = false; render(); };
+$("shuffle").onclick = () => { newPuzzle(); };
+
+$("modeToggle").onclick = e => {
+  const b = e.target.closest("[data-mode]"); if (!b) return;
+  mode = b.dataset.mode;
+  [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x === b));
+  newPuzzle();
+};
+$("playToggle").onclick = e => {
+  const b = e.target.closest("[data-play]"); if (!b) return;
+  playMode = b.dataset.play;
+  [...$("playToggle").children].forEach(x => x.classList.toggle("on", x === b));
+  newPuzzle();
+};
+// Populate the results panel from a saved/just-solved record and show it.
+// Used both by the "View results" button and, on load, to drop a player
+// straight onto an already-solved mode's result — same as tubed's
+// maybeShowSolvedResult().
+function showSavedResult() {
+  const rec = todaysRec || lastResult;
+  if (rec) {
+    const secs = rec.secs !== undefined ? rec.secs : rec.time;
+    const hints = rec.hints;
+    lastResult = { secs, hints };
+    $("resTitle").textContent = hints === 0 ? "Flawless!" : "Solved!";
+    $("resSub").textContent = resultSubText();
+    $("resTime").textContent = fmtTime(secs);
+    $("resHints").textContent = String(hints);
+    $("resPuzzleNum").textContent = "Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "Hard" : "Easy");
+    if (playMode === "daily") {
+      $("practiceNote").hidden = true;
+      $("histLbl").hidden = false; $("histList").hidden = false;
+      renderHistoryList(mode);
+      const cached = _leaderboardStatsCache[mode + ":" + isoToday()];
+      $("leaderboard-stats").innerHTML = "";
+      if (cached) renderLeaderboardBlock(cached); else loadLeaderboardStats(isoToday(), mode);
+    } else {
+      $("practiceNote").hidden = false;
+      $("histLbl").hidden = true; $("histList").hidden = true;
+      $("leaderboard-stats").innerHTML = "";
+    }
+    updateShareButtons();
+    updateCrossModeButton();
+  }
+  showResultsPanel();
+}
+$("viewResultsBtn").onclick = showSavedResult;
+$("backBtn").onclick = showBoard;
+$("shareBtn").onclick = shareResult;
+$("copyBtn").onclick = copyResult;
+$("tryOtherBtn").onclick = () => switchToMode(otherMode(mode));
+$("tryOtherBoardBtn").onclick = () => switchToMode(otherMode(mode));
+
+$("howBtn").onclick = () => openModal("howOverlay");
+$("howClose").onclick = () => closeModal("howOverlay");
+$("howGotIt").onclick = () => closeModal("howOverlay");
+$("howOverlay").onclick = e => closeOnBg(e, "howOverlay");
+
+$("feedbackBtn").onclick = () => {
+  $("feedbackFormWrap").hidden = false; $("feedbackSuccess").hidden = true;
+  $("feedbackMsg").value = ""; $("feedbackEmail").value = "";
+  const b = $("feedbackSendBtn"); b.disabled = false; b.textContent = "Send feedback";
+  openModal("feedbackOverlay");
+};
+$("feedbackClose").onclick = () => closeModal("feedbackOverlay");
+$("feedbackOverlay").onclick = e => closeOnBg(e, "feedbackOverlay");
+$("feedbackSendBtn").onclick = submitFeedback;
+
+$("privacyBtn").onclick = () => openModal("privacyOverlay");
+$("privacyClose").onclick = () => closeModal("privacyOverlay");
+$("privacyOverlay").onclick = e => closeOnBg(e, "privacyOverlay");
+
+$("yr").textContent = new Date().getFullYear();
+
+// Practice mode held in reserve (see PRACTICE_ENABLED above) — remove
+// these two lines to bring the Daily/Practice toggle back.
+if (!PRACTICE_ENABLED) $("playToggle").hidden = true;
+
+// On load, land on whichever of today's two puzzles isn't done yet (or, if
+// both are, on Hard's own result) — same rule tubed follows on refresh.
+if (playMode === "daily") {
+  mode = pickDefaultMode();
+  [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x.dataset.mode === mode));
+}
+newPuzzle();
+if (todaysRec) showSavedResult();
+</script>
+</body>
+</html>
