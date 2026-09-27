@@ -732,9 +732,14 @@ function renderLeaderboardBlock(stats) {
       ? '<div class="lb-rank">🏆 You\'re #' + stats.my_rank + " today</div>" : "";
     parts.push('<div class="lb-band ' + tier + (anchor ? "" : " lb-solo") + '"><div class="lb-pct">📊 TOP ' + stats.top_pct + '% TODAY</div>' + podium + "</div>");
     _lbShareLabel = { share: "&#128172; Share your Top " + stats.top_pct + "%", copy: "&#128203; Copy your Top " + stats.top_pct + "%" };
-    const sb = $("shareBtn"); if (sb && !sb.classList.contains("success")) sb.innerHTML = _lbShareLabel.share;
-    const cb = $("copyBtn"); if (cb && !cb.classList.contains("copied")) cb.innerHTML = _lbShareLabel.copy;
+  } else {
+    // No banner this time (too few players, or outside the top half) — the
+    // share button must fall back too, or it's left showing a stale
+    // percentage left over from a previous mode/puzzle that did qualify.
+    _lbShareLabel = _LB_SHARE_DEFAULT;
   }
+  const sb = $("shareBtn"); if (sb && !sb.classList.contains("success")) sb.innerHTML = _lbShareLabel.share;
+  const cb = $("copyBtn"); if (cb && !cb.classList.contains("copied")) cb.innerHTML = _lbShareLabel.copy;
   if (anchor) parts.push('<div class="lb-anchor">' + anchor + "</div>");
   slot.innerHTML = parts.join("");
 }
@@ -1046,7 +1051,7 @@ function handleWin() {
   $("resTime").textContent = fmtTime(secs);
   $("resHints").textContent = String(hints);
   $("resPuzzleNum").textContent = "Threaded #" + num + " · " + (mode === "hard" ? "Hard" : "Easy");
-  $("leaderboard-stats").innerHTML = "";
+  renderLeaderboardBlock(null);   // clears any stale banner/share-label from a previous mode's result
 
   if (playMode === "daily") {
     const entry = { date: isoToday(), mode, num, time: secs, hints };
@@ -1231,12 +1236,11 @@ function showSavedResult() {
       $("histLbl").hidden = false; $("histList").hidden = false;
       renderHistoryList(mode);
       const cached = _leaderboardStatsCache[mode + ":" + isoToday()];
-      $("leaderboard-stats").innerHTML = "";
-      if (cached) renderLeaderboardBlock(cached); else loadLeaderboardStats(isoToday(), mode);
+      if (cached) renderLeaderboardBlock(cached); else { renderLeaderboardBlock(null); loadLeaderboardStats(isoToday(), mode); }
     } else {
       $("practiceNote").hidden = false;
       $("histLbl").hidden = true; $("histList").hidden = true;
-      $("leaderboard-stats").innerHTML = "";
+      renderLeaderboardBlock(null);
     }
     updateShareButtons();
     updateCrossModeButton();
