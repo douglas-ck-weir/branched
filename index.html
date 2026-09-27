@@ -1090,6 +1090,7 @@ function cellFromEvent(e) {
 }
 
 boardEl.addEventListener("pointerdown", e => {
+  if (todaysRec) return;   // today's puzzle is already submitted — the board is a read-only view
   const cell = cellFromEvent(e);
   if (cell === null) return;
   e.preventDefault();
