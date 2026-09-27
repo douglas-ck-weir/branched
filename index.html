@@ -726,16 +726,22 @@ function renderLeaderboardBlock(stats) {
   const slot = $("leaderboard-stats"); if (!slot) return;
   const anchor = _lbAnchorLine(stats);
   const parts = [];
+  const podium = !!stats && stats.is_top3 && stats.total_players >= LB_MIN_PLAYERS;
   if (_lbShowPct(stats)) {
     const tier = stats.top_pct <= 1 ? "tier-elite" : stats.top_pct <= 10 ? "tier-good" : "tier-mid";
-    const podium = (stats.is_top3 && stats.total_players >= LB_MIN_PLAYERS)
-      ? '<div class="lb-rank">🏆 You\'re #' + stats.my_rank + " today</div>" : "";
-    parts.push('<div class="lb-band ' + tier + (anchor ? "" : " lb-solo") + '"><div class="lb-pct">📊 TOP ' + stats.top_pct + '% TODAY</div>' + podium + "</div>");
+    const podiumLine = podium ? '<div class="lb-rank">🏆 You\'re #' + stats.my_rank + " today</div>" : "";
+    parts.push('<div class="lb-band ' + tier + (anchor ? "" : " lb-solo") + '"><div class="lb-pct">📊 TOP ' + stats.top_pct + '% TODAY</div>' + podiumLine + "</div>");
+  }
+  // Top-3 gets its own share label ("Share your 1st Place") that takes
+  // priority over the plain percentage — same priority order as the share
+  // text itself. Falls back to the default whenever neither qualifies, or
+  // it's left showing a stale label from a previous mode/puzzle that did.
+  if (podium) {
+    const ordinal = stats.my_rank === 1 ? "1st" : stats.my_rank === 2 ? "2nd" : "3rd";
+    _lbShareLabel = { share: "&#128172; Share your " + ordinal + " Place", copy: "&#128203; Copy your " + ordinal + " Place" };
+  } else if (_lbShowPct(stats)) {
     _lbShareLabel = { share: "&#128172; Share your Top " + stats.top_pct + "%", copy: "&#128203; Copy your Top " + stats.top_pct + "%" };
   } else {
-    // No banner this time (too few players, or outside the top half) — the
-    // share button must fall back too, or it's left showing a stale
-    // percentage left over from a previous mode/puzzle that did qualify.
     _lbShareLabel = _LB_SHARE_DEFAULT;
   }
   const sb = $("shareBtn"); if (sb && !sb.classList.contains("success")) sb.innerHTML = _lbShareLabel.share;
