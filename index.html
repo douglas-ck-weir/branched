@@ -156,8 +156,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 .btn-copy-fallback.copied{color:#16a34a;border-color:#16a34a;}
 .btn-reset{touch-action:manipulation;background:var(--navy);color:white;width:100%;padding:14px;font-size:15px;font-family:'DM Sans',sans-serif;font-weight:500;border:none;border-radius:9px;cursor:pointer;transition:background 0.15s;}
 .btn-reset:hover{background:#1e3a8a;}
-.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--brd);font-size:13px;}
-.hist-row:last-child{border-bottom:none;}
+.hist-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .practice-note{font-size:12px;color:var(--muted);text-align:center;background:var(--bg);border-radius:10px;padding:10px;margin-bottom:16px;}
 
@@ -185,12 +184,15 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 
   <div class="daily-badge" id="dailyBadge" hidden>&nbsp;</div>
 
-  <div id="boardView">
-    <div class="mode-toggle" id="modeToggle">
-      <button class="mode-tab on" data-mode="easy">🟢 Easy<span class="mode-check" id="check-easy" hidden>&#10003;</span></button>
-      <button class="mode-tab hard" data-mode="hard">🔥 Hard<span class="mode-check" id="check-hard" hidden>&#10003;</span></button>
-    </div>
+  <!-- Lives outside both #boardView and #resultsView so it stays visible
+       (and switchable) whether the player is on the puzzle or their result —
+       same as tubed's own mode-toggle placement. -->
+  <div class="mode-toggle" id="modeToggle">
+    <button class="mode-tab on" data-mode="easy">🟢 Easy<span class="mode-check" id="check-easy" hidden>&#10003;</span></button>
+    <button class="mode-tab hard" data-mode="hard">🔥 Hard<span class="mode-check" id="check-hard" hidden>&#10003;</span></button>
+  </div>
 
+  <div id="boardView">
     <div class="mode-toggle" id="playToggle">
       <button class="mode-tab on" data-play="daily">Daily</button>
       <button class="mode-tab" data-play="practice">Practice</button>
@@ -202,18 +204,18 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       </div>
     </div>
 
-    <button class="btn-how" id="howBtn">❓ How to play</button>
+    <button class="btn-how" id="howBtn">How to play ❓</button>
 
     <div class="card">
       <div class="challenge-row">
         <div class="st-box">
           <div class="st-role">Start</div>
-          <div class="st-name" id="fromName">—</div>
+          <div class="st-name" id="fromName">-</div>
         </div>
         <div class="arr">→</div>
         <div class="st-box">
           <div class="st-role">Finish</div>
-          <div class="st-name" id="toName">—</div>
+          <div class="st-name" id="toName">-</div>
         </div>
       </div>
       <div class="challenge-sub" id="dir">&nbsp;</div>
@@ -248,21 +250,25 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 
   <div class="card" id="resultsView" hidden>
     <div class="result-title" id="resTitle">Solved!</div>
-    <div class="result-sub" id="resSub">— → —</div>
+    <div class="result-sub" id="resSub">- → -</div>
     <div id="leaderboard-stats"></div>
     <div class="times-grid">
       <div class="time-box"><div class="time-val" id="resTime">0:00</div><div class="time-lbl">Time taken</div></div>
       <div class="time-box"><div class="time-val" id="resHints">0</div><div class="time-lbl">Hints used</div></div>
     </div>
-    <div class="practice-note" id="practiceNote" hidden>Practice puzzles aren't saved or ranked — switch to Daily to build your history.</div>
+    <div class="practice-note" id="practiceNote" hidden>Practice puzzles aren't saved or ranked. Switch to Daily to build your history.</div>
     <div class="puzzle-num" id="resPuzzleNum">Threaded #1 · Easy</div>
     <button class="btn-share" id="shareBtn">&#128172; Share my result</button>
     <button class="btn-copy-fallback" id="copyBtn" hidden>&#128203; Copy to clipboard</button>
     <button class="btn-view-results" id="tryOtherBtn" hidden style="margin-bottom:12px;">Try today's Hard puzzle</button>
-    <div class="sec-lbl" id="histLbl" style="margin-top:6px;">Past results</div>
-    <div id="histList"></div>
     <button class="btn-feedback" id="feedbackBtn">&#x270F;&#xFE0F; Give feedback</button>
     <button class="btn-reset" id="backBtn">&#8592; Back to puzzle</button>
+  </div>
+
+  <!-- Its own section below the result card, not inside it — same layout as tubed. -->
+  <div id="pastResultsSection" hidden>
+    <div class="sec-lbl" id="histLbl">Past results</div>
+    <div id="histList"></div>
   </div>
 
   <div class="footer">
@@ -279,23 +285,23 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
     </div>
     <div class="how-step"><div class="how-num">1</div><div class="how-txt">You're shown a <strong>start</strong> and <strong>finish</strong> station on a 5×5 grid.</div></div>
     <div class="how-step"><div class="how-num">2</div><div class="how-txt">Drag from the start square through <strong>every square</strong> on the grid, without lifting your finger, until it's completely full.</div></div>
-    <div class="how-step"><div class="how-num">3</div><div class="how-txt">Station squares only accept your path when they're <strong>next in line order</strong> — get it wrong and the square bounces back.</div></div>
+    <div class="how-step"><div class="how-num">3</div><div class="how-txt">Station squares only accept your path when they're <strong>next in line order</strong>. Get it wrong and the square bounces back.</div></div>
     <div class="how-step"><div class="how-num">4</div><div class="how-txt">Fill every square, ending on <strong>finish</strong>, and you've solved it.</div></div>
     <hr class="how-divider"/>
     <div style="font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">Hard mode</div>
     <div style="font-size:13px;color:var(--txt);line-height:1.6;margin-bottom:10px;">
-      Two Underground lines cross this grid. Nothing tells you where — spotting the interchange station, and which stations belong to which line, is the whole puzzle.
+      Two Underground lines cross this grid. Nothing tells you where: spotting the interchange station, and which stations belong to which line, is the whole puzzle.
     </div>
     <hr class="how-divider"/>
     <div style="font-size:11px;color:var(--coral);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">Hints</div>
     <div style="font-size:13px;color:var(--txt);line-height:1.6;margin-bottom:16px;">
-      3 free hints per puzzle. Each reveals the next square you need — but only if your current path can still be completed; if you've drawn into a dead end, it'll tell you to undo instead.
+      3 free hints per puzzle. Each reveals the next square you need, but only if your current path can still be completed; if you've drawn into a dead end, it'll tell you to undo instead.
     </div>
     <hr class="how-divider"/>
     <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px;">
-      Two puzzles a day, Easy and Hard, refreshing at midnight — the same puzzles for everyone. Compare your time on the leaderboard.
+      Two puzzles a day, Easy and Hard, refreshing at midnight. The same puzzles for everyone. Compare your time on the leaderboard.
     </div>
-    <button class="btn-got-it" id="howGotIt">Got it — let's play! 🚇</button>
+    <button class="btn-got-it" id="howGotIt">Got it, let's play! 🚇</button>
   </div>
 </div>
 
@@ -308,7 +314,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
     <div id="feedbackFormWrap">
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Found a bug, got a suggestion, or just want to say hi? We'd love to hear from you.</p>
       <textarea id="feedbackMsg" class="feedback-input" placeholder="Your feedback..."></textarea>
-      <input type="email" id="feedbackEmail" class="feedback-input" placeholder="Your email (optional — only if you'd like a reply)"/>
+      <input type="email" id="feedbackEmail" class="feedback-input" placeholder="Your email (optional, only if you'd like a reply)"/>
       <button class="btn-feedback-send" id="feedbackSendBtn">Send feedback</button>
     </div>
     <div id="feedbackSuccess" class="feedback-success" hidden>&#10003; Thanks for your feedback!<br><span style="color:var(--muted);font-size:12px;">It's been sent to the Threaded team.</span></div>
@@ -322,8 +328,8 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <button class="modal-close" id="privacyClose">&#x2715;</button>
     </div>
     <div style="font-size:13px;color:var(--txt);line-height:1.7;">
-      <p style="margin-bottom:12px;">Threaded stores your puzzle progress and history <strong>on your own device</strong> (localStorage) — it never leaves your browser and we can't see it.</p>
-      <p style="margin-bottom:12px;">To power the daily leaderboard, your device is given a <strong>random, anonymous ID</strong> — not linked to your name, email or any account. When you finish a daily puzzle, that ID, your completion time, hints used, and the puzzle's date and mode are sent to our database so we can compute rankings. No one can trace it back to you.</p>
+      <p style="margin-bottom:12px;">Threaded stores your puzzle progress and history <strong>on your own device</strong> (localStorage); it never leaves your browser and we can't see it.</p>
+      <p style="margin-bottom:12px;">To power the daily leaderboard, your device is given a <strong>random, anonymous ID</strong>, not linked to your name, email or any account. When you finish a daily puzzle, that ID, your completion time, hints used, and the puzzle's date and mode are sent to our database so we can compute rankings. No one can trace it back to you.</p>
       <p style="margin-bottom:12px;">If you send feedback, your message (and email, if you choose to give one) is sent to us via a third-party form service, only so we can read and reply to it.</p>
       <p style="margin-bottom:0;">We don't use tracking cookies, ads, or sell any data. Not affiliated with Transport for London.</p>
     </div>
@@ -644,7 +650,7 @@ function renderHistoryList(m) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px 0;">No games played yet</div>';
     return;
   }
-  el.innerHTML = rows.map(e => `<div class="hist-row">
+  el.innerHTML = rows.map(e => `<div class="card hist-row">
       <div><div>${e.mode === "hard" ? "Hard" : "Easy"} · #${e.num}</div><div class="hist-sub">${fmtTime(e.time)} · ${e.hints} hint${e.hints === 1 ? "" : "s"} · ${e.date}</div></div>
       <div style="font-size:18px;">${e.hints === 0 ? "✨" : "🚇"}</div>
     </div>`).join("");
@@ -747,17 +753,17 @@ function buildShareBlocks(hints) {
   return "🟨🟨⬜⬜⬜";
 }
 function buildShareText(secs, hints) {
-  const hintsLine = hints === 0 ? "🧭 No hints — nailed it solo"
-    : hints === 1 ? "🧭 1 hint — a small nudge"
-    : hints === 2 ? "🧭 2 hints — needed a steer"
-    : "🧭 3 hints — talked me through it";
+  const hintsLine = hints === 0 ? "🧭 No hints: nailed it solo"
+    : hints === 1 ? "🧭 1 hint: a small nudge"
+    : hints === 2 ? "🧭 2 hints: needed a steer"
+    : "🧭 3 hints: talked me through it";
   // Naming the line is safe post-solve in Easy (start/finish are shown to
   // everyone up front anyway). Hard never names its lines here — a share is
   // public and other players may not have solved TODAY'S puzzle yet, so
   // this can't spoil the interchange for them even after the sharer's won.
   const lineNote = mode === "hard" ? "" : "\n📍 " + puzzle.lineName + " line";
   const challengeLine = mode === "hard"
-    ? "🔀 Two lines cross this grid — find where."
+    ? "🔀 Two lines cross this grid. Find where."
     : "🗺️ Trace the " + puzzle.lineName + " line faster than me.";
   const lines = [
     "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs) + lineNote,
@@ -814,6 +820,7 @@ let puzzle, stationAt, path, drawing = false, t0 = null, tick = null;
 let mode = "easy", playMode = "daily", won = false;
 let hintsLeft = 3, hintTimeout = null;
 let todaysRec = null, lastResult = null;
+let deferTimerUntilHowToClosed = false;   // first-time visitors: don't start the clock while they're still reading the how-to-play modal
 
 function currentSeed() { return playMode === "daily" ? dailySeed(mode) : (Math.random() * 1e9 | 0); }
 function otherMode(m) { return m === "hard" ? "easy" : "hard"; }
@@ -831,13 +838,15 @@ function updateCrossModeButton() {
   });
 }
 function switchToMode(newMode) {
+  if (newMode === mode) return;
   mode = newMode;
   [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x.dataset.mode === newMode));
   newPuzzle();
+  if (todaysRec) showSavedResult();   // that mode's already solved today — land straight on its result
 }
 
-function showBoard() { $("resultsView").hidden = true; $("boardView").hidden = false; }
-function showResultsPanel() { $("boardView").hidden = true; $("resultsView").hidden = false; }
+function showBoard() { $("resultsView").hidden = true; $("pastResultsSection").hidden = true; $("boardView").hidden = false; }
+function showResultsPanel() { $("boardView").hidden = true; $("resultsView").hidden = false; $("pastResultsSection").hidden = false; }
 
 function newPuzzle() {
   puzzle = makePuzzle(currentSeed(), mode);
@@ -855,7 +864,7 @@ function newPuzzle() {
 
   const isHard = mode === "hard";
   if (isHard) {
-    $("dir").textContent = "Two lines cross this grid — find where.";
+    $("dir").textContent = "Two lines cross this grid. Find where.";
     document.documentElement.style.setProperty("--line", DATA.colours[puzzle.lineA] || "#666");
   } else {
     const lineStops = DATA.lines[puzzle.lineName];
@@ -884,7 +893,7 @@ function newPuzzle() {
     $("timer-box").classList.add("done");
     $("status").textContent = "";
     render();
-  } else {
+  } else if (!deferTimerUntilHowToClosed) {
     startTimer();   // ticking from the moment the board appears, not the first move
   }
   updateDailyBadge();
@@ -900,7 +909,7 @@ function updateGsub() {
 function updateDailyBadge() {
   $("dailyBadge").hidden = true;
   if (playMode !== "daily" || !todaysRec) return;
-  $("dailyBadge").textContent = "✓ Solved today — " + fmtTime(todaysRec.time)
+  $("dailyBadge").textContent = "✓ Solved today: " + fmtTime(todaysRec.time)
     + (todaysRec.hints ? " (" + todaysRec.hints + " hint" + (todaysRec.hints === 1 ? "" : "s") + ")" : "");
   $("dailyBadge").hidden = false;
 }
@@ -1118,7 +1127,7 @@ function useHint() {
   const onSolution = path.every((c, i) => c === puzzle.solution[i]);
   clearTimeout(hintTimeout);
   if (!onSolution) {
-    $("status").textContent = "That path won't complete the grid — try Undo or Reset.";
+    $("status").textContent = "That path won't complete the grid. Try Undo or Reset.";
     hintTimeout = setTimeout(render, 2600);
     return;
   }
@@ -1193,9 +1202,7 @@ $("shuffle").onclick = () => { newPuzzle(); };
 
 $("modeToggle").onclick = e => {
   const b = e.target.closest("[data-mode]"); if (!b) return;
-  mode = b.dataset.mode;
-  [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x === b));
-  newPuzzle();
+  switchToMode(b.dataset.mode);
 };
 $("playToggle").onclick = e => {
   const b = e.target.closest("[data-play]"); if (!b) return;
@@ -1242,10 +1249,15 @@ $("copyBtn").onclick = copyResult;
 $("tryOtherBtn").onclick = () => switchToMode(otherMode(mode));
 $("tryOtherBoardBtn").onclick = () => switchToMode(otherMode(mode));
 
+// First-time visitors: reading the how-to shouldn't cost them time off the clock.
+function closeHowToPlay() {
+  closeModal("howOverlay");
+  if (deferTimerUntilHowToClosed) { deferTimerUntilHowToClosed = false; startTimer(); }
+}
 $("howBtn").onclick = () => openModal("howOverlay");
-$("howClose").onclick = () => closeModal("howOverlay");
-$("howGotIt").onclick = () => closeModal("howOverlay");
-$("howOverlay").onclick = e => closeOnBg(e, "howOverlay");
+$("howClose").onclick = closeHowToPlay;
+$("howGotIt").onclick = closeHowToPlay;
+$("howOverlay").onclick = e => { if (e.target.id === "howOverlay") closeHowToPlay(); };
 
 $("feedbackBtn").onclick = () => {
   $("feedbackFormWrap").hidden = false; $("feedbackSuccess").hidden = true;
@@ -1273,8 +1285,20 @@ if (playMode === "daily") {
   mode = pickDefaultMode();
   [...$("modeToggle").children].forEach(x => x.classList.toggle("on", x.dataset.mode === mode));
 }
+
+// Same as tubed: show the how-to-play modal automatically the first time
+// anyone opens the game, then never again (versioned key, so a future
+// meaningful change to the rules can re-show it once for returning players).
+const SEEN_HOW_KEY = "threaded_seen_how_v1";
+const isFirstVisit = !localStorage.getItem(SEEN_HOW_KEY);
+if (isFirstVisit) {
+  localStorage.setItem(SEEN_HOW_KEY, "1");
+  deferTimerUntilHowToClosed = true;
+}
+
 newPuzzle();
 if (todaysRec) showSavedResult();
+if (isFirstVisit) setTimeout(() => openModal("howOverlay"), 600);
 </script>
 </body>
 </html>
