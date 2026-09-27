@@ -874,6 +874,7 @@ function newPuzzle() {
   lastResult = todaysRec ? { secs: todaysRec.time, hints: todaysRec.hints } : null;
   $("playRow").hidden = !!todaysRec;
   $("viewResultsRow").hidden = !todaysRec;
+  $("status").hidden = !!todaysRec;   // no live status to show on a locked, completed board
   if (todaysRec) {
     // Already solved today — "Back to puzzle" should show the completed
     // grid, not the blank one newPuzzle() just built.
