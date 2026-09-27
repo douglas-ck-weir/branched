@@ -657,12 +657,13 @@ function renderHistoryList(m) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   6. LEADERBOARD (Supabase) — same project + pattern as tubed's own
-      scores/get_leaderboard_stats, in a separate threaded_scores
-      table. Fire-and-forget: never blocks the UI, silent-fails.
+   6. LEADERBOARD (Supabase) — same pattern as tubed's own
+      scores/get_leaderboard_stats, but its own separate Supabase project
+      (not shared with tubed), so nothing here can ever affect tubed's
+      backend. Fire-and-forget: never blocks the UI, silent-fails.
    ══════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL = "https://hngjziobiblvnosbmgsx.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_hs_dkr1WA-FIbLy3uBwh5w_GMZyg4-N";
+const SUPABASE_URL = "https://kkhsxlgsfbwxktwtfjpj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_MPB0TCd87GjgXXkAFscFJA_SCTEV_B2";
 const LB_MIN_PLAYERS = 5, LB_MAX_PCT = 50;
 const _leaderboardStatsCache = {};
 const _LB_SHARE_DEFAULT = { share: "&#128172; Share my result", copy: "&#128203; Copy to clipboard" };
