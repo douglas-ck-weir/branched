@@ -882,6 +882,14 @@ const centre = i => [ (i % N) * (CELL + GAP) + CELL / 2, (i / N | 0) * (CELL + G
 // bottom of this script is the entire re-enable.
 const PRACTICE_ENABLED = false;
 
+// Players reported being able to trial-and-error their way through the
+// puzzle: a station square physically refused to accept a wrong-order move,
+// so probing every neighbour cost nothing and revealed the answer by
+// elimination without any real reasoning about line order. Set this back to
+// true (no other change needed) to instantly revert to the old, safer
+// behaviour if the looser version below doesn't land well.
+const BLOCK_OUT_OF_ORDER_STATIONS = false;
+
 let puzzle, stationAt, path, drawing = false, t0 = null, tick = null, elapsedBase = 0;
 let mode = "easy", playMode = "daily", won = false;
 let hintsLeft = 3, hintTimeout = null;
@@ -1009,6 +1017,11 @@ function buildBoard() {
 // retroactive confirmation, not a hint.
 function splitPos() {
   if (puzzle.mode !== "hard") return -1;
+  // Gated on countStations() (the CONFIRMED correct-order prefix, see below)
+  // rather than raw path membership — with BLOCK_OUT_OF_ORDER_STATIONS off, a
+  // player could physically stand on the pivot cell without having reached it
+  // in the right order yet, and that must not flip the colour early.
+  if (countStations() <= puzzle.pivotIdx) return -1;
   return path.findIndex(c => stationAt.get(c) === puzzle.pivotIdx);
 }
 function primaryColour()   { return DATA.colours[puzzle.mode === "hard" ? puzzle.lineA : puzzle.lineName] || "#666"; }
@@ -1073,7 +1086,9 @@ function render() {
     $("status").textContent = "";
   } else {
     const left = CELLS - path.length;
-    $("status").textContent = left === 0 ? "" : left + " square" + (left === 1 ? "" : "s") + " to fill";
+    $("status").textContent = left === 0
+      ? "Full, but the stations aren't in the right order — try Undo."
+      : left + " square" + (left === 1 ? "" : "s") + " to fill";
   }
   updateHintButton();
 }
@@ -1174,20 +1189,46 @@ function tryExtend(cell) {
   }
   if (!adjacent(head, cell) || path.includes(cell)) return;
 
-  // A station square may only be entered when it is the next one on the line.
-  if (stationAt.has(cell) && stationAt.get(cell) !== countStations()) {
+  // A station square may only be entered when it is the next one on the line
+  // — gated behind BLOCK_OUT_OF_ORDER_STATIONS (see flag above). Off, wrong-
+  // order stations are allowed through like any other cell; the grid can
+  // still fill up without ever becoming a valid win from there, same as any
+  // other dead end (checked below).
+  if (BLOCK_OUT_OF_ORDER_STATIONS && stationAt.has(cell) && stationAt.get(cell) !== countStations()) {
     const el = cellsEl.children[cell];
     el.classList.remove("bad"); void el.offsetWidth; el.classList.add("bad");
     return;
   }
   startTimer();
   path.push(cell);
-  // Uniqueness guarantees the only complete in-order path is the intended one.
-  if (path.length === CELLS) { won = true; clearInterval(tick); tick = null; handleWin(); }
+  if (path.length === CELLS) {
+    // Uniqueness guarantees the only complete path with every station in the
+    // right order is the intended one — with the block above off, a full
+    // grid doesn't necessarily mean that, so it's checked explicitly here.
+    if (countStations() === puzzle.stations.length) {
+      won = true; clearInterval(tick); tick = null; handleWin();
+    } else {
+      const el = cellsEl.children[cell];
+      el.classList.remove("bad"); void el.offsetWidth; el.classList.add("bad");
+    }
+  }
   render();
 }
 
-function countStations() { return path.filter(c => stationAt.has(c)).length; }
+// The CONFIRMED station count: the longest prefix of puzzle.stations that's
+// been visited, in the correct relative order, within path. A station
+// entered out of order sits in path like any filler cell — it doesn't
+// advance this count, so it isn't coloured in early and doesn't trigger the
+// Hard-mode interchange reveal ahead of time (see splitPos/styleStationCells).
+// When BLOCK_OUT_OF_ORDER_STATIONS is on, stations can only ever be entered
+// in order, so this always equals the raw count — identical to the old
+// behaviour.
+function countStations() {
+  const visited = path.filter(c => stationAt.has(c)).map(c => stationAt.get(c));
+  let n = 0;
+  while (n < visited.length && visited[n] === n) n++;
+  return n;
+}
 
 function cellFromEvent(e) {
   const el = document.elementFromPoint(e.clientX, e.clientY);
