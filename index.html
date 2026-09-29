@@ -1026,7 +1026,9 @@ function render() {
     el.classList.toggle("head", i === head && !won);
   });
   styleStationCells();
-  if (!won) {
+  if (won) {
+    $("status").textContent = "";
+  } else {
     const left = CELLS - path.length;
     $("status").textContent = left === 0 ? "" : left + " square" + (left === 1 ? "" : "s") + " to fill";
   }
