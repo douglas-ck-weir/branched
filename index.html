@@ -28,6 +28,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);min-
 .timer-n{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red);line-height:1;letter-spacing:1px;font-variant-numeric:tabular-nums;}
 .timer-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
 .timer-box.done .timer-n{color:var(--muted);}
+.streak-box{background:var(--surf);border:0.5px solid var(--brd);border-radius:10px;padding:6px 0;text-align:center;flex-shrink:0;width:80px;}
+.streak-n{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--navy);line-height:1;}
+.streak-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
 
 .daily-badge{font-size:11.5px;color:var(--ok);text-align:center;font-weight:600;margin-bottom:10px;}
 
@@ -179,6 +182,10 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <div class="timer-box" id="timer-box">
         <div class="timer-n" id="timer">0:00</div>
         <div class="timer-l">Timer</div>
+      </div>
+      <div class="streak-box" id="streak-box">
+        <div class="streak-n" id="streak">0</div>
+        <div class="streak-l">Day Streak</div>
       </div>
     </div>
   </div>
@@ -659,6 +666,39 @@ function pushHistory(m, entry) {
 }
 function todaysRecord(m) { return getHistory(m).find(e => e.date === isoToday()) || null; }
 
+// Day streak, per mode — same rule as tubed's _nextStreakValue: continues if
+// the mode was last won yesterday (or already today), resets to 1 otherwise.
+// Stored separately from history (rather than derived from it on every
+// render) so a missed day doesn't silently zero the display until the next
+// win decides it — same "frozen until next play" feel tubed's streak has.
+function streakKey(m) { return "threaded_streak_" + m; }
+function getStreakStore(m) {
+  try { return JSON.parse(localStorage.getItem(streakKey(m))) || { streak: 0, lastPlayed: null }; }
+  catch (e) { return { streak: 0, lastPlayed: null }; }
+}
+function yesterdayKey() {
+  const p = londonDateParts();
+  const d = new Date(Date.UTC(p.y, p.m - 1, p.d) - 86400000);
+  return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+}
+// Call once per real win in daily mode (handleWin already gates on that, and
+// a mode can only be won once per day, so this can't double-count).
+function recordStreak(m) {
+  const today = isoToday();
+  const s = getStreakStore(m);
+  if (s.lastPlayed !== today) {
+    s.streak = (s.lastPlayed && s.lastPlayed >= yesterdayKey()) ? (s.streak || 0) + 1 : 1;
+    s.lastPlayed = today;
+    try { localStorage.setItem(streakKey(m), JSON.stringify(s)); } catch (e) { /* private browsing / storage blocked */ }
+  }
+}
+// Coral on Hard so it's visually obvious which mode's streak is shown — same
+// reasoning as tubed's own streak-disp colour switch.
+function renderStreak(m) {
+  $("streak").textContent = String(getStreakStore(m).streak);
+  $("streak").style.color = m === "hard" ? "var(--coral)" : "var(--navy)";
+}
+
 // Mirrors tubed's own pickDefaultMode(): land on whichever of today's two
 // puzzles isn't finished yet. Once Easy is done, default to Hard — whether
 // that means "go play it" or, if Hard's also done, "here's its result" is
@@ -789,6 +829,8 @@ function buildShareText(secs, hints) {
     "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs),
     hintsLine,
   ];
+  const streak = getStreakStore(mode).streak;
+  if (streak % 5 === 0) lines.push("🔥 " + streak + " day streak");
   const lb = _leaderboardStatsCache[mode + ":" + isoToday()];
   if (lb && lb.is_top3 && lb.total_players >= LB_MIN_PLAYERS) {
     const ordinal = lb.my_rank === 1 ? "1st" : lb.my_rank === 2 ? "2nd" : "3rd";
@@ -923,6 +965,7 @@ function newPuzzle() {
   updateDailyBadge();
   updateModeChecks();
   updateCrossModeButton();
+  renderStreak(mode);
   showBoard();
 }
 
@@ -1076,6 +1119,8 @@ function handleWin() {
   if (playMode === "daily") {
     const entry = { date: isoToday(), mode, num, time: secs, hints };
     pushHistory(mode, entry);
+    recordStreak(mode);
+    renderStreak(mode);
     todaysRec = entry;
     $("practiceNote").hidden = true;
     $("histLbl").hidden = false; $("histList").hidden = false;
@@ -1264,6 +1309,7 @@ function showSavedResult() {
     }
     updateShareButtons();
     updateCrossModeButton();
+    renderStreak(mode);
   }
   showResultsPanel();
 }
