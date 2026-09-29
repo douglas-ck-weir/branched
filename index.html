@@ -882,7 +882,7 @@ const centre = i => [ (i % N) * (CELL + GAP) + CELL / 2, (i / N | 0) * (CELL + G
 // bottom of this script is the entire re-enable.
 const PRACTICE_ENABLED = false;
 
-let puzzle, stationAt, path, drawing = false, t0 = null, tick = null;
+let puzzle, stationAt, path, drawing = false, t0 = null, tick = null, elapsedBase = 0;
 let mode = "easy", playMode = "daily", won = false;
 let hintsLeft = 3, hintTimeout = null;
 let todaysRec = null, lastResult = null;
@@ -918,9 +918,9 @@ function newPuzzle() {
   puzzle = makePuzzle(currentSeed(), mode);
   stationAt = new Map(puzzle.cells.map((c, i) => [c, i]));
   path = [puzzle.cells[0]];
-  won = false; t0 = null; hintsLeft = 3; lastResult = null;
+  won = false; t0 = null; elapsedBase = playMode === "daily" ? getStoredElapsed(mode) : 0; hintsLeft = 3; lastResult = null;
   clearInterval(tick); tick = null; clearTimeout(hintTimeout);
-  $("timer").textContent = "0:00";
+  $("timer").textContent = fmtTime(elapsedBase);
   $("timer-box").classList.remove("done");
   buildBoard(); render(); updateHintButton();
 
@@ -1078,12 +1078,37 @@ function render() {
   updateHintButton();
 }
 
+// Elapsed time (daily mode only) is banked to localStorage as the clock
+// runs, keyed per mode/day, so reloading the page mid-solve can't zero the
+// timer back out — otherwise a player could grind out the route slowly,
+// reload once they know it, and redraw the now-memorised path in seconds
+// for a fake leaderboard time. Time only accumulates while a tab actually
+// has the puzzle open (the interval is what banks it); closing the tab and
+// coming back later the same day doesn't grow the clock in between, so a
+// genuine interruption isn't punished the way a raw wall-clock stamp would.
+function elapsedKey(m) { return "threaded_elapsed_" + m; }
+function getStoredElapsed(m) {
+  try {
+    const s = JSON.parse(localStorage.getItem(elapsedKey(m)));
+    return (s && s.date === isoToday()) ? s.secs : 0;
+  } catch (e) { return 0; }
+}
+function saveElapsed(m, secs) {
+  try { localStorage.setItem(elapsedKey(m), JSON.stringify({ date: isoToday(), secs })); } catch (e) { /* private browsing / storage blocked */ }
+}
+function elapsedSecs() { return (elapsedBase + (t0 !== null ? (Date.now() - t0) / 1000 : 0)) | 0; }
+
 function startTimer() {
   if (t0 !== null) return;
   t0 = Date.now();
+  let lastSaved = elapsedBase | 0;
   tick = setInterval(() => {
-    const s = (Date.now() - t0) / 1000 | 0;
+    const s = elapsedSecs();
     $("timer").textContent = fmtTime(s);
+    if (s !== lastSaved) {
+      lastSaved = s;
+      if (playMode === "daily") saveElapsed(mode, s);
+    }
   }, 250);
 }
 
@@ -1103,7 +1128,7 @@ function resultSubText() {
 }
 
 function handleWin() {
-  const secs = t0 !== null ? (Date.now() - t0) / 1000 | 0 : 0;
+  const secs = elapsedSecs();
   const hints = 3 - hintsLeft;
   const num = puzzleNumber();
   lastResult = { secs, hints };
