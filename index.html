@@ -51,13 +51,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);min-
 .c{background:var(--bg);border:0.5px solid var(--brd);border-radius:8px;
    display:flex;align-items:center;justify-content:center;padding:3px;
    position:relative;overflow:hidden;transition:background .12s;}
-.c.station{background:var(--surf);z-index:3;}
+.c.station{background:var(--surf);}
 .c.start{background:#00e87a;}
 .c.start .nm{color:#053b22;}
 .c.finish{background:#FFD300;}
 .c.finish .nm{color:#4d3d00;}
 .c .nm{font-family:'Bebas Neue',sans-serif;font-size:clamp(8.5px,2.3vw,11.5px);line-height:1.08;
-       text-align:center;letter-spacing:.2px;word-break:break-word;hyphens:auto;color:var(--txt);z-index:2;}
+       text-align:center;letter-spacing:.2px;word-break:break-word;hyphens:auto;color:var(--txt);
+       position:relative;z-index:3;}
 
 .c.head::after{content:"";position:absolute;inset:0;
                box-shadow:inset 0 0 0 3px var(--head-color, var(--line));border-radius:8px;z-index:4;}
@@ -338,6 +339,27 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 
 <script>
 "use strict";
+
+// Dev tool: ?date=YYYY-MM-DD previews that day's daily puzzle by overriding
+// the clock everything else reads from (todayKey/isoToday/dailySeed all go
+// through `new Date()`, so nothing else needs to know this ran). Absent for
+// real players, so this is a no-op in normal use.
+(function () {
+  const m = (location.search || "").match(/[?&]date=(\d{4}-\d{2}-\d{2})/);
+  if (!m) return;
+  const target = new Date(m[1] + "T12:00:00");
+  if (isNaN(target.getTime())) return;
+  const RealDate = Date;
+  const offsetMs = target.getTime() - RealDate.now();
+  const SimDate = function (...args) {
+    return args.length === 0 ? new RealDate(RealDate.now() + offsetMs) : new RealDate(...args);
+  };
+  SimDate.now = () => RealDate.now() + offsetMs;
+  SimDate.parse = RealDate.parse;
+  SimDate.UTC = RealDate.UTC;
+  SimDate.prototype = RealDate.prototype;
+  Date = SimDate;
+})();
 
 // Whole-network data: every usable TfL/Overground line (one canonical
 // branch each — the longest with no duplicate station names, so loop
