@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>Threaded</title>
-<link rel="icon" href="threaded-icon.png"/>
+<title>Branched</title>
+<link rel="icon" href="branched-icon.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -173,9 +173,9 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 <div class="wrap">
 
   <div class="hdr">
-    <img class="roundel" src="threaded-icon.png" alt="Threaded"/>
+    <img class="roundel" src="branched-icon.png" alt="Branched"/>
     <div>
-      <div class="gtitle">Threaded</div>
+      <div class="gtitle">Branched</div>
       <div class="gsub" id="gsub">Daily Puzzle · Easy</div>
     </div>
     <div class="hdr-pills">
@@ -265,7 +265,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <div class="time-box"><div class="time-val" id="resHints">0</div><div class="time-lbl">Hints used</div></div>
     </div>
     <div class="practice-note" id="practiceNote" hidden>Practice puzzles aren't saved or ranked. Switch to Daily to build your history.</div>
-    <div class="puzzle-num" id="resPuzzleNum">Threaded #1 · Easy</div>
+    <div class="puzzle-num" id="resPuzzleNum">Branched #1 · Easy</div>
     <button class="btn-share" id="shareBtn">&#128172; Share my result</button>
     <button class="btn-copy-fallback" id="copyBtn" hidden>&#128203; Copy to clipboard</button>
     <button class="btn-view-results" id="tryOtherBtn" hidden style="margin-bottom:12px;">Try today's Hard puzzle</button>
@@ -281,7 +281,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 
   <div class="footer">
     Not affiliated with Transport for London<br>
-    <button class="footer-link" id="privacyBtn">Privacy</button> · © Threaded <span id="yr"></span>
+    <button class="footer-link" id="privacyBtn">Privacy</button> · © Branched <span id="yr"></span>
   </div>
 </div>
 
@@ -325,7 +325,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <input type="email" id="feedbackEmail" class="feedback-input" placeholder="Your email (optional, only if you'd like a reply)"/>
       <button class="btn-feedback-send" id="feedbackSendBtn">Send feedback</button>
     </div>
-    <div id="feedbackSuccess" class="feedback-success" hidden>&#10003; Thanks for your feedback!<br><span style="color:var(--muted);font-size:12px;">It's been sent to the Threaded team.</span></div>
+    <div id="feedbackSuccess" class="feedback-success" hidden>&#10003; Thanks for your feedback!<br><span style="color:var(--muted);font-size:12px;">It's been sent to the Branched team.</span></div>
   </div>
 </div>
 
@@ -336,7 +336,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <button class="modal-close" id="privacyClose">&#x2715;</button>
     </div>
     <div style="font-size:13px;color:var(--txt);line-height:1.7;">
-      <p style="margin-bottom:12px;">Threaded stores your puzzle progress and history <strong>on your own device</strong> (localStorage); it never leaves your browser and we can't see it.</p>
+      <p style="margin-bottom:12px;">Branched stores your puzzle progress and history <strong>on your own device</strong> (localStorage); it never leaves your browser and we can't see it.</p>
       <p style="margin-bottom:12px;">To power the daily leaderboard, your device is given a <strong>random, anonymous ID</strong>, not linked to your name, email or any account. When you finish a daily puzzle, that ID, your completion time, hints used, and the puzzle's date and mode are sent to our database so we can compute rankings. No one can trace it back to you.</p>
       <p style="margin-bottom:12px;">If you send feedback, your message (and email, if you choose to give one) is sent to us via a third-party form service, only so we can read and reply to it.</p>
       <p style="margin-bottom:0;">We don't use tracking cookies, ads, or sell any data. Not affiliated with Transport for London.</p>
@@ -635,7 +635,7 @@ function londonDateParts() {
     return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
   }
 }
-const EPOCH = Date.UTC(2026, 8, 27);   // 2026-09-27 = Threaded #1
+const EPOCH = Date.UTC(2026, 8, 27);   // 2026-09-27 = Branched #1
 function todayKey() { const p = londonDateParts(); return p.y * 10000 + p.m * 100 + p.d; }
 function isoToday() { const p = londonDateParts(); return p.y + "-" + String(p.m).padStart(2, "0") + "-" + String(p.d).padStart(2, "0"); }
 function dailySeed(mode) { return todayKey() * 2 + (mode === "hard" ? 1 : 0); }
@@ -652,7 +652,7 @@ function fmtTime(s) { return (s / 60 | 0) + ":" + String(s % 60).padStart(2, "0"
       exactly as tubed's is — the leaderboard below is the only piece
       that talks to a server.
    ══════════════════════════════════════════════════════════════════ */
-function historyKey(m) { return "threaded_hist_" + m; }
+function historyKey(m) { return "branched_hist_" + m; }
 function getHistory(m) {
   try { return JSON.parse(localStorage.getItem(historyKey(m))) || []; }
   catch (e) { return []; }
@@ -671,7 +671,7 @@ function todaysRecord(m) { return getHistory(m).find(e => e.date === isoToday())
 // Stored separately from history (rather than derived from it on every
 // render) so a missed day doesn't silently zero the display until the next
 // win decides it — same "frozen until next play" feel tubed's streak has.
-function streakKey(m) { return "threaded_streak_" + m; }
+function streakKey(m) { return "branched_streak_" + m; }
 function getStreakStore(m) {
   try { return JSON.parse(localStorage.getItem(streakKey(m))) || { streak: 0, lastPlayed: null }; }
   catch (e) { return { streak: 0, lastPlayed: null }; }
@@ -732,7 +732,7 @@ const _LB_SHARE_DEFAULT = { share: "&#128172; Share my result", copy: "&#128203;
 let _lbShareLabel = _LB_SHARE_DEFAULT;
 
 function getPlayerId() {
-  const KEY = "threaded_player_id";
+  const KEY = "branched_player_id";
   try {
     let id = localStorage.getItem(KEY);
     if (!id) { id = crypto.randomUUID(); localStorage.setItem(KEY, id); }
@@ -743,7 +743,7 @@ function getPlayerId() {
 function submitScore(s) {
   const playerId = getPlayerId();
   if (!playerId) return;
-  fetch(SUPABASE_URL + "/rest/v1/threaded_scores", {
+  fetch(SUPABASE_URL + "/rest/v1/branched_scores", {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY,
@@ -756,13 +756,13 @@ function submitScore(s) {
     }),
   })
     .then(() => loadLeaderboardStats(s.date, s.mode))
-    .catch(e => console.warn("[threaded] leaderboard submit failed:", e.message));
+    .catch(e => console.warn("[branched] leaderboard submit failed:", e.message));
 }
 
 function loadLeaderboardStats(date, m) {
   const playerId = getPlayerId();
   if (!playerId || !$("leaderboard-stats")) return;
-  fetch(SUPABASE_URL + "/rest/v1/rpc/get_threaded_leaderboard_stats", {
+  fetch(SUPABASE_URL + "/rest/v1/rpc/get_branched_leaderboard_stats", {
     method: "POST",
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ p_date: date, p_mode: m, p_player: playerId }),
@@ -773,7 +773,7 @@ function loadLeaderboardStats(date, m) {
       if (mode !== m || isoToday() !== date) return;   // board may have moved on while this was in flight
       renderLeaderboardBlock(stats);
     })
-    .catch(e => console.warn("[threaded] leaderboard stats failed:", e.message));
+    .catch(e => console.warn("[branched] leaderboard stats failed:", e.message));
 }
 
 function _lbShowPct(stats) {
@@ -818,7 +818,7 @@ function renderLeaderboardBlock(stats) {
       World!" callout applies (never both; neither if the leaderboard
       doesn't have enough players yet), then the site link.
    ══════════════════════════════════════════════════════════════════ */
-const SITE_URL = "playthreaded.co.uk"; // TODO: swap for the real domain once this is hosted
+const SITE_URL = "playbranched.co.uk"; // TODO: confirm once the domain is registered and hosted
 
 function buildShareText(secs, hints) {
   const hintsLine = hints === 0 ? "🧭 No hints: nailed it solo"
@@ -826,7 +826,7 @@ function buildShareText(secs, hints) {
     : hints === 2 ? "🧭 2 hints: needed a steer"
     : "🧭 3 hints: talked me through it";
   const lines = [
-    "🚇 Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs),
+    "🚇 Branched #" + puzzleNumber() + " · " + (mode === "hard" ? "🔥 Hard" : "🟢 Easy") + " · solved in " + fmtTime(secs),
     hintsLine,
   ];
   const streak = getStreakStore(mode).streak;
@@ -1101,7 +1101,7 @@ function render() {
 // has the puzzle open (the interval is what banks it); closing the tab and
 // coming back later the same day doesn't grow the clock in between, so a
 // genuine interruption isn't punished the way a raw wall-clock stamp would.
-function elapsedKey(m) { return "threaded_elapsed_" + m; }
+function elapsedKey(m) { return "branched_elapsed_" + m; }
 function getStoredElapsed(m) {
   try {
     const s = JSON.parse(localStorage.getItem(elapsedKey(m)));
@@ -1153,7 +1153,7 @@ function handleWin() {
   $("resSub").textContent = resultSubText();
   $("resTime").textContent = fmtTime(secs);
   $("resHints").textContent = String(hints);
-  $("resPuzzleNum").textContent = "Threaded #" + num + " · " + (mode === "hard" ? "Hard" : "Easy");
+  $("resPuzzleNum").textContent = "Branched #" + num + " · " + (mode === "hard" ? "Hard" : "Easy");
   renderLeaderboardBlock(null);   // clears any stale banner/share-label from a previous mode's result
 
   if (playMode === "daily") {
@@ -1300,8 +1300,8 @@ async function submitFeedback() {
   btn.disabled = true; btn.textContent = "Sending...";
   const payload = {
     access_key: "24bf0458-2dcb-492b-840c-a8e37b6a8b7d",
-    subject: "Threaded Feedback - Puzzle #" + puzzleNumber(),
-    from_name: "Threaded Player",
+    subject: "Branched Feedback - Puzzle #" + puzzleNumber(),
+    from_name: "Branched Player",
     message: msg,
     email: email || "noreply@playtubed.co.uk",
     // Line identity included here even for Hard mode — this is a private
@@ -1361,7 +1361,7 @@ function showSavedResult() {
     $("resSub").textContent = resultSubText();
     $("resTime").textContent = fmtTime(secs);
     $("resHints").textContent = String(hints);
-    $("resPuzzleNum").textContent = "Threaded #" + puzzleNumber() + " · " + (mode === "hard" ? "Hard" : "Easy");
+    $("resPuzzleNum").textContent = "Branched #" + puzzleNumber() + " · " + (mode === "hard" ? "Hard" : "Easy");
     if (playMode === "daily") {
       $("practiceNote").hidden = true;
       $("histLbl").hidden = false; $("histList").hidden = false;
@@ -1426,7 +1426,7 @@ if (playMode === "daily") {
 // Same as tubed: show the how-to-play modal automatically the first time
 // anyone opens the game, then never again (versioned key, so a future
 // meaningful change to the rules can re-show it once for returning players).
-const SEEN_HOW_KEY = "threaded_seen_how_v1";
+const SEEN_HOW_KEY = "branched_seen_how_v1";
 const isFirstVisit = !localStorage.getItem(SEEN_HOW_KEY);
 if (isFirstVisit) {
   localStorage.setItem(SEEN_HOW_KEY, "1");
