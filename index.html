@@ -282,7 +282,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
 
   <div class="footer">
     Not affiliated with Transport for London<br>
-    <button class="footer-link" id="privacyBtn">Privacy</button> · © Branched <span id="yr"></span>
+    <a class="footer-link" href="privacy.html">Privacy</a> · © Branched <span id="yr"></span>
   </div>
 </div>
 
@@ -327,22 +327,6 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <button class="btn-feedback-send" id="feedbackSendBtn">Send feedback</button>
     </div>
     <div id="feedbackSuccess" class="feedback-success" hidden>&#10003; Thanks for your feedback!<br><span style="color:var(--muted);font-size:12px;">It's been sent to the Branched team.</span></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="privacyOverlay">
-  <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Privacy</div>
-      <button class="modal-close" id="privacyClose">&#x2715;</button>
-    </div>
-    <div style="font-size:13px;color:var(--txt);line-height:1.7;">
-      <p style="margin-bottom:12px;">Branched stores your puzzle progress and history <strong>on your own device</strong> (localStorage); it never leaves your browser and we can't see it.</p>
-      <p style="margin-bottom:12px;">To power the daily leaderboard, your device is given a <strong>random, anonymous ID</strong>, not linked to your name, email or any account. When you finish a daily puzzle, that ID, your completion time, hints used, and the puzzle's date and mode are sent to our database so we can compute rankings. No one can trace it back to you.</p>
-      <p style="margin-bottom:12px;">If you send feedback, your message (and email, if you choose to give one) is sent to us via a third-party form service, only so we can read and reply to it.</p>
-      <p style="margin-bottom:12px;">We count page visits using <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noopener noreferrer" style="color:inherit;">GoatCounter</a>, a privacy-focused analytics tool. It sets no cookies, creates no persistent identifier, and can't track you across other websites. It tells us how many people played today, nothing more.</p>
-      <p style="margin-bottom:0;">We don't use tracking cookies, ads, or sell any data. Not affiliated with Transport for London.</p>
-    </div>
   </div>
 </div>
 
@@ -1407,10 +1391,6 @@ $("feedbackBtn").onclick = () => {
 $("feedbackClose").onclick = () => closeModal("feedbackOverlay");
 $("feedbackOverlay").onclick = e => closeOnBg(e, "feedbackOverlay");
 $("feedbackSendBtn").onclick = submitFeedback;
-
-$("privacyBtn").onclick = () => openModal("privacyOverlay");
-$("privacyClose").onclick = () => closeModal("privacyOverlay");
-$("privacyOverlay").onclick = e => closeOnBg(e, "privacyOverlay");
 
 $("yr").textContent = new Date().getFullYear();
 
