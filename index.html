@@ -93,10 +93,13 @@ svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-
 /* ---- action buttons ---- */
 .btn-row{display:flex;gap:8px;margin-bottom:12px;}
 .btn-row button{flex:1;touch-action:manipulation;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;transition:all 0.15s;}
-.btn-ghost{background:none;border:0.5px solid var(--brd);color:var(--muted);padding:11px 8px;font-size:13px;font-weight:500;}
-.btn-ghost:hover{border-color:var(--txt);color:var(--txt);}
+.btn-ghost{background:var(--surf);border:1px solid var(--brd);color:var(--txt);padding:12px 8px;font-size:14px;font-weight:500;}
+.btn-ghost:hover{border-color:#1d4ed8;color:#1d4ed8;}
+.btn-ghost:active{background:#eff6ff;}
+#hint{border-color:#93c5fd;color:#1d4ed8;background:#eff6ff;}
 .btn-ghost:disabled{opacity:.4;cursor:not-allowed;}
-.btn-ghost:disabled:hover{border-color:var(--brd);color:var(--muted);}
+.btn-ghost:disabled:hover{border-color:var(--brd);color:var(--txt);}
+#hint:disabled:hover{border-color:#93c5fd;color:#1d4ed8;}
 .btn-add{background:var(--navy);color:#fff;border:none;padding:11px 8px;font-size:13px;font-weight:500;letter-spacing:.3px;}
 .btn-add:hover{background:#1e3a8a;}
 .btn-add.hard{background:var(--coral);}
