@@ -75,6 +75,8 @@ svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-
 
 /* ---- status ---- */
 .status{text-align:center;font-size:13px;min-height:20px;font-weight:500;color:var(--muted);margin-bottom:12px;}
+.status.count{font-size:15px;color:var(--txt);}
+.status.count strong{font-family:'Bebas Neue',sans-serif;font-size:22px;font-weight:400;letter-spacing:1px;color:var(--navy);vertical-align:-1px;}
 
 /* ---- mode toggles ---- */
 .mode-toggle{display:flex;background:var(--surf);border:0.5px solid var(--brd);border-radius:10px;padding:3px;margin-bottom:10px;gap:3px;}
@@ -254,7 +256,7 @@ textarea.feedback-input{resize:vertical;min-height:100px;line-height:1.5;}
       <button class="btn-view-results" id="tryOtherBoardBtn" hidden>Try today's Hard puzzle</button>
     </div>
 
-    <div class="hint" id="footerHint">Drag from <strong>START</strong> through every square, hitting the stations in line order.</div>
+    <div class="hint" id="footerHint">Drag from <strong>START</strong> through <strong>every square</strong>, hitting the stations in line order.</div>
   </div>
 
   <div class="card" id="resultsView" hidden>
@@ -934,7 +936,7 @@ function newPuzzle() {
   }
   $("footerHint").innerHTML = isHard
     ? "Somewhere in this grid one Underground line hands off to another. Find the interchange and the order will click."
-    : "Drag from <strong>START</strong> through every square, hitting the stations in line order.";
+    : "Drag from <strong>START</strong> through <strong>every square</strong>, hitting the stations in line order.";
 
   $("shuffleRow").hidden = playMode !== "daily" || !PRACTICE_ENABLED;   // was inverted; fixed while dormant
   updateGsub();
@@ -1072,9 +1074,10 @@ function render() {
     $("status").textContent = "";
   } else {
     const left = CELLS - path.length;
-    $("status").textContent = left === 0
-      ? "Full, but the stations aren't in the right order — try Undo."
-      : left + " square" + (left === 1 ? "" : "s") + " to fill";
+    const st = $("status");
+    st.classList.toggle("count", left > 0);
+    if (left === 0) st.textContent = "Full, but the stations aren't in the right order — try Undo.";
+    else st.innerHTML = "Fill every square: <strong>" + left + "</strong> left to go";
   }
   updateHintButton();
 }
@@ -1250,6 +1253,7 @@ function useHint() {
   const onSolution = path.every((c, i) => c === puzzle.solution[i]);
   clearTimeout(hintTimeout);
   if (!onSolution) {
+    $("status").classList.remove("count");
     $("status").textContent = "That path won't complete the grid. Try Undo or Reset.";
     hintTimeout = setTimeout(render, 2600);
     return;
@@ -1268,6 +1272,7 @@ function useHint() {
   render();
   const el = cellsEl.children[nextCell];
   el.classList.remove("hinted"); void el.offsetWidth; el.classList.add("hinted");
+  $("status").classList.remove("count");
   $("status").textContent = label ? "Hint: drew " + label : "Hint: drew the next square";
   hintTimeout = setTimeout(render, 2600);
 }
