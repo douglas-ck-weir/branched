@@ -1171,14 +1171,15 @@ function handleWin() {
   showResultsPanel();
 }
 
-function tryExtend(cell) {
+function tryExtend(cell, rewind = false) {
   if (won) return;
   const head = path[path.length - 1];
   if (cell === head) return;
 
-  if (path.length > 1 && cell === path[path.length - 2]) {   // drag back to erase
-    path.pop(); render(); return;
-  }
+  // A deliberate press on an earlier square rewinds to it, however far back.
+  // While dragging, rewinding is handled (more cautiously) in stepTo.
+  const at = path.indexOf(cell);
+  if (at !== -1) { if (rewind) { path.length = at + 1; render(); } return; }
   if (!adjacent(head, cell) || path.includes(cell)) return;
 
   // A station square may only be entered when it is the next one on the line
@@ -1222,29 +1223,88 @@ function countStations() {
   return n;
 }
 
-function cellFromEvent(e) {
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  const c = el && el.closest("[data-cell]");
-  return c ? +c.dataset.cell : null;
+// Pointer → cell by geometry rather than elementFromPoint: the 6px gaps
+// between squares used to be dead zones (null), so a quick drag that clipped
+// a gap or a corner registered nothing. Dividing the board into N×N equal
+// zones gives every point on the board to its nearest square.
+function cellAtPoint(x, y) {
+  const r = boardEl.getBoundingClientRect();
+  if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) return null;
+  const col = Math.min(N - 1, Math.floor((x - r.left) / r.width * N));
+  const row = Math.min(N - 1, Math.floor((y - r.top) / r.height * N));
+  return row * N + col;
+}
+
+function canEnter(cell) {
+  if (path.includes(cell)) return false;
+  return !(BLOCK_OUT_OF_ORDER_STATIONS && stationAt.has(cell) && stationAt.get(cell) !== countStations());
+}
+
+// Move the head to `cell`. Squares are only joined orthogonally, so a drag
+// that cuts a corner lands on a diagonal square: bridge it through whichever
+// of the two squares in between is free (the one nearer the pointer if both
+// are), rather than ignoring the move.
+// Drag-back rewinds only from the square directly behind the head (or the one
+// diagonally behind it, for a corner-cutting retrace). Touching anything older
+// is ignored, so a slip onto a drawn square can't wipe the path back to it;
+// going further back means retracing the route, or pressing on that square.
+function stepTo(cell, x, y) {
+  const head = path[path.length - 1];
+  if (won || cell === head) return;
+  const at = path.indexOf(cell);
+  if (at !== -1) {
+    if (at === path.length - 2 || (at === path.length - 3 && !adjacent(head, cell))) { path.length = at + 1; render(); }
+    return;
+  }
+  const dr = Math.floor(cell / N) - Math.floor(head / N), dc = cell % N - head % N;
+  if (Math.abs(dr) === 1 && Math.abs(dc) === 1 && canEnter(cell)) {
+    const mids = [head + dc, head + dr * N].filter(canEnter);
+    if (mids.length) {
+      const r = boardEl.getBoundingClientRect();
+      const d = m => Math.hypot(r.left + (m % N + .5) * r.width / N - x, r.top + (Math.floor(m / N) + .5) * r.height / N - y);
+      tryExtend(mids.sort((a, b) => d(a) - d(b))[0]);
+    }
+  }
+  tryExtend(cell);
+}
+
+// Walk the pointer's route since the last event in small steps, so a fast
+// swipe that jumps several squares between events still draws through each
+// one in order instead of stalling on a non-adjacent target.
+let lastPt = null;
+function drawTo(x, y) {
+  // Once solved the board view is hidden and measures 0 wide, so a finger
+  // still moving at that moment would divide by zero below; bail out.
+  const size = boardEl.getBoundingClientRect().width / N;
+  if (won || !size) { lastPt = null; return; }
+  const from = lastPt || { x, y };
+  const steps = Math.min(100, Math.max(1, Math.ceil(Math.hypot(x - from.x, y - from.y) / (size / 4))));
+  for (let i = 1; i <= steps; i++) {
+    const px = from.x + (x - from.x) * i / steps, py = from.y + (y - from.y) * i / steps;
+    const c = cellAtPoint(px, py);
+    if (c !== null) stepTo(c, px, py);
+  }
+  lastPt = { x, y };
 }
 
 boardEl.addEventListener("pointerdown", e => {
   if (todaysRec) return;   // today's puzzle is already submitted — the board is a read-only view
-  const cell = cellFromEvent(e);
+  const cell = cellAtPoint(e.clientX, e.clientY);
   if (cell === null) return;
   e.preventDefault();
   boardEl.setPointerCapture(e.pointerId);
   if (cell === puzzle.cells[0] && path.length > 1) { path = [puzzle.cells[0]]; won = false; render(); }
   drawing = true;
-  tryExtend(cell);
+  lastPt = { x: e.clientX, y: e.clientY };
+  tryExtend(cell, true);
 });
 boardEl.addEventListener("pointermove", e => {
   if (!drawing) return;
-  const cell = cellFromEvent(e);
-  if (cell !== null) tryExtend(cell);
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  for (const ev of (evs.length ? evs : [e])) drawTo(ev.clientX, ev.clientY);
 });
-addEventListener("pointerup", () => { drawing = false; });
-addEventListener("pointercancel", () => { drawing = false; });
+addEventListener("pointerup", () => { drawing = false; lastPt = null; });
+addEventListener("pointercancel", () => { drawing = false; lastPt = null; });
 
 /* ---- hints ---- */
 function updateHintButton() {
